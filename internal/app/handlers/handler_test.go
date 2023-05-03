@@ -109,6 +109,7 @@ func TestGetFullURL(t *testing.T) {
 			w := httptest.NewRecorder()
 			GetFullURL(w, request)
 			result := w.Result()
+			defer result.Body.Close()
 
 			assert.Equal(t, tt.want.code, result.StatusCode)
 			assert.Equal(t, tt.want.locationIsNotEmpty, len(result.Header.Get("Location")) > 0)
