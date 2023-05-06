@@ -63,9 +63,9 @@ func TestCreateShortURL(t *testing.T) {
 			assert.Equal(t, tt.want.code, w.Code)
 			assert.Equal(t, tt.want.contentType, w.Header().Get("Content-Type"))
 
-			resBody, err := io.ReadAll(w.Body)
+			resBody, _ := io.ReadAll(w.Body)
 			bodyIsNotEmpty := true
-			_, err = url.ParseRequestURI(string(resBody))
+			_, err := url.ParseRequestURI(string(resBody))
 			if err != nil {
 				bodyIsNotEmpty = false
 			}
