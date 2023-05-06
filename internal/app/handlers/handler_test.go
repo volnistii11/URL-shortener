@@ -1,8 +1,8 @@
 package handlers
 
 import (
+	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"github.com/volnistii11/URL-shortener/internal/app/storage"
 	"io"
 	"net/http"
@@ -11,6 +11,11 @@ import (
 	"strings"
 	"testing"
 )
+
+func SetUpRouter() *gin.Engine {
+	router := gin.Default()
+	return router
+}
 
 func TestCreateShortURL(t *testing.T) {
 	type want struct {
@@ -31,7 +36,7 @@ func TestCreateShortURL(t *testing.T) {
 			want: want{
 				code:                   201,
 				responseBodyIsNotEmpty: true,
-				contentType:            "text/plain",
+				contentType:            "text/plain; charset=utf-8",
 			},
 		},
 		{
@@ -48,19 +53,17 @@ func TestCreateShortURL(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			bodyReader := strings.NewReader(tt.requestBody)
-			request := httptest.NewRequest(http.MethodPost, tt.request, bodyReader)
 
+			r := SetUpRouter()
+			r.POST("/", CreateShortURL)
+			req, _ := http.NewRequest(http.MethodPost, tt.request, bodyReader)
 			w := httptest.NewRecorder()
-			CreateShortURL(w, request)
+			r.ServeHTTP(w, req)
 
-			res := w.Result()
-			assert.Equal(t, tt.want.code, res.StatusCode)
-			assert.Equal(t, tt.want.contentType, res.Header.Get("Content-Type"))
+			assert.Equal(t, tt.want.code, w.Code)
+			assert.Equal(t, tt.want.contentType, w.Header().Get("Content-Type"))
 
-			defer res.Body.Close()
-			resBody, err := io.ReadAll(res.Body)
-			require.NoError(t, err)
-
+			resBody, err := io.ReadAll(w.Body)
 			bodyIsNotEmpty := true
 			_, err = url.ParseRequestURI(string(resBody))
 			if err != nil {
@@ -105,14 +108,14 @@ func TestGetFullURL(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			request := httptest.NewRequest(http.MethodGet, tt.request, nil)
+			r := SetUpRouter()
+			r.POST("/:short_url", GetFullURL)
+			req, _ := http.NewRequest(http.MethodPost, tt.request, nil)
 			w := httptest.NewRecorder()
-			GetFullURL(w, request)
-			result := w.Result()
-			defer result.Body.Close()
+			r.ServeHTTP(w, req)
 
-			assert.Equal(t, tt.want.code, result.StatusCode)
-			assert.Equal(t, tt.want.locationIsNotEmpty, len(result.Header.Get("Location")) > 0)
+			assert.Equal(t, tt.want.code, w.Code)
+			assert.Equal(t, tt.want.locationIsNotEmpty, len(w.Header().Get("Location")) > 0)
 		})
 	}
 }

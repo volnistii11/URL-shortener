@@ -1,12 +1,10 @@
 package handlers
 
 import (
-	"fmt"
+	"github.com/gin-gonic/gin"
 	"github.com/volnistii11/URL-shortener/internal/app/storage"
-	"io"
 	"math/rand"
 	"net/http"
-	"strings"
 	"time"
 )
 
@@ -17,50 +15,36 @@ func init() {
 
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
-func MainHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
-		CreateShortURL(w, r)
-	} else if r.Method == http.MethodGet {
-		GetFullURL(w, r)
-	}
-}
-
-func CreateShortURL(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	body, err := io.ReadAll(r.Body)
+func CreateShortURL(c *gin.Context) {
+	c.Header("content-type", "text/plain; charset=utf-8")
+	body, err := c.GetRawData()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, errorResponse(err.Error()))
 		return
 	}
-	r.Body.Close()
+
 	if len(body) == 0 {
-		http.Error(w, "Body is empty.", http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, errorResponse("Body is empty"))
 		return
 	}
+
 	scheme := "http"
-	if r.TLS != nil {
+	if c.Request.TLS != nil {
 		scheme = "https"
 	}
 	shortURL := randString(10)
 	storage.URLMap[shortURL] = string(body)
-
-	w.Header().Set("content-type", "text/plain")
-	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte(fmt.Sprintf("%v://%v%v%v", scheme, r.Host, r.RequestURI, shortURL)))
+	c.String(http.StatusCreated, "%v://%v%v%v", scheme, c.Request.Host, c.Request.RequestURI, shortURL)
 }
 
-func GetFullURL(w http.ResponseWriter, r *http.Request) {
-	path := strings.Trim(r.URL.Path, "/")
-	shortURL := strings.Split(path, "/")[0]
+func GetFullURL(c *gin.Context) {
+	shortURL := c.Params.ByName("short_url")
 
 	if fullURL, ok := storage.URLMap[shortURL]; ok {
-		w.Header().Set("Location", fullURL)
-		w.WriteHeader(http.StatusTemporaryRedirect)
+		c.Header("Location", fullURL)
+		c.Status(http.StatusTemporaryRedirect)
 	} else {
-		w.WriteHeader(http.StatusBadRequest)
+		c.Status(http.StatusBadRequest)
 	}
 }
 
@@ -70,4 +54,8 @@ func randString(n int) string {
 		b[i] = letters[rand.Intn(len(letters))]
 	}
 	return string(b)
+}
+
+func errorResponse(err string) gin.H {
+	return gin.H{"error": err}
 }
