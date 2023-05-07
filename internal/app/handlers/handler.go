@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/volnistii11/URL-shortener/internal/app/config"
 	"github.com/volnistii11/URL-shortener/internal/app/storage"
 	"math/rand"
 	"net/http"
@@ -34,7 +35,13 @@ func CreateShortURL(c *gin.Context) {
 	}
 	shortURL := randString(10)
 	storage.URLMap[shortURL] = string(body)
-	c.String(http.StatusCreated, "%v://%v%v%v", scheme, c.Request.Host, c.Request.RequestURI, shortURL)
+
+	respondingServerAddress := scheme + "://" + c.Request.Host + "/" + c.Request.RequestURI
+	if config.Addresses.RespondingServer != "" {
+		respondingServerAddress = config.Addresses.RespondingServer
+	}
+
+	c.String(http.StatusCreated, "%v/%v", respondingServerAddress, shortURL)
 }
 
 func GetFullURL(c *gin.Context) {
