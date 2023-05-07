@@ -39,7 +39,7 @@ func CreateShortURL(c *gin.Context) {
 
 	respondingServerAddress := scheme + "://" + c.Request.Host + c.Request.RequestURI
 	if config.Addresses.RespondingServer != "" {
-		respondingServerAddress = config.Addresses.RespondingServer
+		respondingServerAddress = config.Addresses.RespondingServer + "/"
 	}
 
 	fmt.Println(respondingServerAddress)
