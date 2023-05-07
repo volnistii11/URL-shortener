@@ -8,7 +8,8 @@ var Addresses struct {
 }
 
 func ParseFlags() {
+
 	flag.StringVar(&Addresses.Server, "a", ":8080", "server address")
-	flag.StringVar(&Addresses.RespondingServer, "b", ":8080", "responding server address")
+	flag.StringVar(&Addresses.RespondingServer, "b", "", "responding server address")
 	flag.Parse()
 }
