@@ -38,10 +38,7 @@ func main() {
 	// в заголовках запроса указываем кодировку
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	// отправляем запрос и получаем ответ
-	response, err := client.Do(request)
-	if err != nil {
-		panic(err)
-	}
+	response, _ := client.Do(request)
 	// выводим код ответа
 	fmt.Println("Статус-код ", response.Status)
 	defer response.Body.Close()
