@@ -12,8 +12,5 @@ func RunServer() {
 	r.POST("/", handlers.CreateShortURL)
 	r.GET("/:short_url", handlers.GetFullURL)
 
-	err := r.Run(config.Addresses.Server)
-	if err != nil {
-		panic(err)
-	}
+	r.Run(config.Addresses.Server)
 }
