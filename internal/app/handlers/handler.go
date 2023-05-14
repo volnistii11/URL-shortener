@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	storage.URLMap = map[string]string{}
+	storage.URLDependency = map[string]string{}
 }
 
 func CreateShortURL(ctx *gin.Context) {
@@ -31,7 +31,7 @@ func CreateShortURL(ctx *gin.Context) {
 		scheme = "https"
 	}
 	shortURL := utils.RandString(10)
-	storage.URLMap[shortURL] = string(body)
+	storage.URLDependency[shortURL] = string(body)
 
 	respondingServerAddress := scheme + "://" + ctx.Request.Host + ctx.Request.RequestURI
 	if config.Addresses.RespondingServer != "" {
@@ -45,7 +45,7 @@ func CreateShortURL(ctx *gin.Context) {
 func GetFullURL(ctx *gin.Context) {
 	shortURL := ctx.Params.ByName("short_url")
 
-	if fullURL, ok := storage.URLMap[shortURL]; ok {
+	if fullURL, ok := storage.URLDependency[shortURL]; ok {
 		ctx.Header("Location", fullURL)
 		ctx.Status(http.StatusTemporaryRedirect)
 	} else {

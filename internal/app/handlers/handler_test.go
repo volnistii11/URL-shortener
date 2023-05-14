@@ -103,8 +103,8 @@ func TestGetFullURL(t *testing.T) {
 	}
 
 	//Это надо будет переписать, когда разберусь и перепишу storage
-	storage.URLMap = map[string]string{}
-	storage.URLMap["sKtBWabUkV"] = "https://go.dev/tour/welcome/1"
+	storage.URLDependency = map[string]string{}
+	storage.URLDependency["sKtBWabUkV"] = "https://go.dev/tour/welcome/1"
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
