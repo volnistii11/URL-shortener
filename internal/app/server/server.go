@@ -8,6 +8,7 @@ import (
 
 func RunServer() {
 	config.ParseFlags()
+
 	r := gin.Default()
 	r.POST("/", handlers.CreateShortURL)
 	r.GET("/:short_url", handlers.GetFullURL)

@@ -6,13 +6,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/volnistii11/URL-shortener/internal/app/config"
 	"github.com/volnistii11/URL-shortener/internal/app/storage"
-	"github.com/volnistii11/URL-shortener/internal/app/utils"
 	"net/http"
 )
-
-func init() {
-	storage.URLDependency = map[string]string{}
-}
 
 func CreateShortURL(ctx *gin.Context) {
 	ctx.Header("content-type", "text/plain; charset=utf-8")
@@ -32,8 +27,9 @@ func CreateShortURL(ctx *gin.Context) {
 	if ctx.Request.TLS != nil {
 		scheme = "https"
 	}
-	shortURL := utils.RandString(10)
-	storage.URLDependency[shortURL] = string(body)
+
+	s := storage.GetStorage()
+	shortURL := s.WriteURL(string(body))
 
 	respondingServerAddress := scheme + "://" + ctx.Request.Host + ctx.Request.RequestURI
 	if config.Addresses.RespondingServer != "" {
@@ -47,11 +43,14 @@ func CreateShortURL(ctx *gin.Context) {
 func GetFullURL(ctx *gin.Context) {
 	shortURL := ctx.Params.ByName("short_url")
 
-	if fullURL, ok := storage.URLDependency[shortURL]; ok {
+	s := storage.GetStorage()
+	fullURL, err := s.ReadURL(shortURL)
+
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+	} else {
 		ctx.Header("Location", fullURL)
 		ctx.Status(http.StatusTemporaryRedirect)
-	} else {
-		ctx.Status(http.StatusBadRequest)
 	}
 }
 

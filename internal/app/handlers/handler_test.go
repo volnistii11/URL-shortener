@@ -75,6 +75,10 @@ func TestCreateShortURL(t *testing.T) {
 }
 
 func TestGetFullURL(t *testing.T) {
+	//Это надо будет переписать, когда разберусь и перепишу storage
+	s := storage.GetStorage()
+	shortURL := s.WriteURL("https://go.dev/tour/welcome/1")
+
 	type want struct {
 		code               int
 		locationIsNotEmpty bool
@@ -86,7 +90,7 @@ func TestGetFullURL(t *testing.T) {
 	}{
 		{
 			name:    "positive test #1",
-			request: "http://localhost:8080/sKtBWabUkV",
+			request: "http://localhost:8080/" + shortURL,
 			want: want{
 				code:               307,
 				locationIsNotEmpty: true,
@@ -101,10 +105,6 @@ func TestGetFullURL(t *testing.T) {
 			},
 		},
 	}
-
-	//Это надо будет переписать, когда разберусь и перепишу storage
-	storage.URLDependency = map[string]string{}
-	storage.URLDependency["sKtBWabUkV"] = "https://go.dev/tour/welcome/1"
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
