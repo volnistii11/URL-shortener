@@ -48,10 +48,11 @@ func GetFullURL(ctx *gin.Context) {
 
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
-	} else {
-		ctx.Header("Location", fullURL)
-		ctx.Status(http.StatusTemporaryRedirect)
+		return
+
 	}
+	ctx.Header("Location", fullURL)
+	ctx.Status(http.StatusTemporaryRedirect)
 }
 
 func errorResponse(err error) gin.H {
