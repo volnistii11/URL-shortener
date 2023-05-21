@@ -9,7 +9,22 @@ import (
 	"net/http"
 )
 
-func CreateShortURL(ctx *gin.Context) {
+type HandlerProvider interface {
+	CreateShortURL(ctx *gin.Context)
+	GetFullURL(ctx *gin.Context)
+}
+
+func NewHandlerProvider(repository storage.Repository) HandlerProvider {
+	return &handlerURL{
+		repo: repository,
+	}
+}
+
+type handlerURL struct {
+	repo storage.Repository
+}
+
+func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 	ctx.Header("content-type", "text/plain; charset=utf-8")
 	body, err := ctx.GetRawData()
 	if err != nil {
@@ -28,8 +43,7 @@ func CreateShortURL(ctx *gin.Context) {
 		scheme = "https"
 	}
 
-	s := storage.GetStorage()
-	shortURL := s.WriteURL(string(body))
+	shortURL := h.repo.WriteURL(string(body))
 
 	respondingServerAddress := scheme + "://" + ctx.Request.Host + ctx.Request.RequestURI
 	if config.Addresses.RespondingServer != "" {
@@ -40,16 +54,14 @@ func CreateShortURL(ctx *gin.Context) {
 	ctx.String(http.StatusCreated, "%v%v", respondingServerAddress, shortURL)
 }
 
-func GetFullURL(ctx *gin.Context) {
+func (h *handlerURL) GetFullURL(ctx *gin.Context) {
 	shortURL := ctx.Params.ByName("short_url")
 
-	s := storage.GetStorage()
-	fullURL, err := s.ReadURL(shortURL)
+	fullURL, err := h.repo.ReadURL(shortURL)
 
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
-
 	}
 	ctx.Header("Location", fullURL)
 	ctx.Status(http.StatusTemporaryRedirect)
