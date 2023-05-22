@@ -7,7 +7,7 @@ import (
 
 type Repository interface {
 	ReadURL(id string) (string, error)
-	WriteURL(url string) string
+	WriteURL(url string) (string, error)
 }
 
 func NewRepository() Repository {
@@ -21,15 +21,18 @@ type url struct {
 }
 
 func (storage *url) ReadURL(id string) (string, error) {
-	if fullURL, ok := storage.urlDependency[id]; !ok {
+	fullURL, ok := storage.urlDependency[id]
+	if !ok {
 		return fullURL, errors.New("full url not found")
-	} else {
-		return fullURL, nil
 	}
+	return fullURL, nil
 }
 
-func (storage *url) WriteURL(url string) string {
+func (storage *url) WriteURL(url string) (string, error) {
 	shortURL := utils.RandString(10)
 	storage.urlDependency[shortURL] = url
-	return shortURL
+	if len(storage.urlDependency[shortURL]) < 10 {
+		return shortURL, errors.New("error in short link generation, link length is less than 10")
+	}
+	return shortURL, nil
 }

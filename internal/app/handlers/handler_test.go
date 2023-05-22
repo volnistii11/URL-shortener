@@ -82,7 +82,7 @@ func TestCreateShortURL(t *testing.T) {
 func TestGetFullURL(t *testing.T) {
 	repo := storage.NewRepository()
 	flags := config.NewFlags()
-	shortURL := repo.WriteURL("https://go.dev/tour/welcome/1")
+	shortURL, _ := repo.WriteURL("https://go.dev/tour/welcome/1")
 
 	type want struct {
 		code               int
