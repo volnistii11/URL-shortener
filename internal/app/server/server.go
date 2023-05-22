@@ -7,17 +7,27 @@ import (
 	"github.com/volnistii11/URL-shortener/internal/app/storage"
 )
 
-type Server struct {
+type Router interface {
+	RunServer(storage.Repository, config.Flags)
 }
 
-func RunServer(repository storage.Repository) {
-	config.ParseFlags()
+func NewRouter() Router {
+	return &server{
+		httpServer: gin.Default(),
+	}
+}
 
-	h := handlers.NewHandlerProvider(repository)
+type server struct {
+	httpServer *gin.Engine
+}
 
-	r := gin.Default()
-	r.POST("/", h.CreateShortURL)
-	r.GET("/:short_url", h.GetFullURL)
+func (srv *server) RunServer(repository storage.Repository, cfg config.Flags) {
+	cfg.ParseFlags()
 
-	r.Run(config.Addresses.Server)
+	h := handlers.NewHandlerProvider(repository, cfg)
+
+	srv.httpServer.POST("/", h.CreateShortURL)
+	srv.httpServer.GET("/:short_url", h.GetFullURL)
+
+	srv.httpServer.Run(cfg.GetServer())
 }

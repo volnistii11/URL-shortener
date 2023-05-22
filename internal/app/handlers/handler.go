@@ -14,14 +14,16 @@ type HandlerProvider interface {
 	GetFullURL(ctx *gin.Context)
 }
 
-func NewHandlerProvider(repository storage.Repository) HandlerProvider {
+func NewHandlerProvider(repository storage.Repository, cfg config.Flags) HandlerProvider {
 	return &handlerURL{
-		repo: repository,
+		repo:  repository,
+		flags: cfg,
 	}
 }
 
 type handlerURL struct {
-	repo storage.Repository
+	repo  storage.Repository
+	flags config.Flags
 }
 
 func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
@@ -46,8 +48,8 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 	shortURL := h.repo.WriteURL(string(body))
 
 	respondingServerAddress := scheme + "://" + ctx.Request.Host + ctx.Request.RequestURI
-	if config.Addresses.RespondingServer != "" {
-		respondingServerAddress = config.Addresses.RespondingServer + "/"
+	if h.flags.GetRespondingServer() != "" {
+		respondingServerAddress = h.flags.GetRespondingServer() + "/"
 	}
 
 	fmt.Println(respondingServerAddress)
