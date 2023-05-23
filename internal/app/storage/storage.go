@@ -5,37 +5,34 @@ import (
 	"github.com/volnistii11/URL-shortener/internal/app/utils"
 )
 
-type URL struct {
-	URLDependency map[string]string
-}
-
-func NewStorage() *URL {
-	return &URL{
-		URLDependency: map[string]string{},
-	}
-}
-
-func (storage *URL) ReadURL(id string) (string, error) {
-	if fullURL, ok := storage.URLDependency[id]; !ok {
-		return fullURL, errors.New("full url not found")
-	} else {
-		return fullURL, nil
-	}
-}
-
-func (storage *URL) WriteURL(url string) string {
-	shortURL := utils.RandString(10)
-	storage.URLDependency[shortURL] = url
-	return shortURL
-}
-
-type URLReaderWriter interface {
+type Repository interface {
 	ReadURL(id string) (string, error)
-	WriteURL(url string) string
+	WriteURL(url string) (string, error)
 }
 
-var myURL URLReaderWriter = NewStorage()
+func NewRepository() Repository {
+	return &url{
+		urlDependency: map[string]string{},
+	}
+}
 
-func GetStorage() URLReaderWriter {
-	return myURL
+type url struct {
+	urlDependency map[string]string
+}
+
+func (storage *url) ReadURL(id string) (string, error) {
+	fullURL, ok := storage.urlDependency[id]
+	if !ok {
+		return fullURL, errors.New("full url not found")
+	}
+	return fullURL, nil
+}
+
+func (storage *url) WriteURL(url string) (string, error) {
+	shortURL := utils.RandString(10)
+	storage.urlDependency[shortURL] = url
+	if len(storage.urlDependency[shortURL]) < 10 {
+		return shortURL, errors.New("error in short link generation, link length is less than 10")
+	}
+	return shortURL, nil
 }

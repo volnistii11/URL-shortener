@@ -3,6 +3,7 @@ package handlers
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
+	"github.com/volnistii11/URL-shortener/internal/app/config"
 	"github.com/volnistii11/URL-shortener/internal/app/storage"
 	"io"
 	"net/http"
@@ -54,8 +55,12 @@ func TestCreateShortURL(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			bodyReader := strings.NewReader(tt.requestBody)
 
+			repo := storage.NewRepository()
+			flags := config.NewFlags()
+			handler := NewHandlerProvider(repo, flags)
+
 			r := SetUpRouter()
-			r.POST("/", CreateShortURL)
+			r.POST("/", handler.CreateShortURL)
 			req, _ := http.NewRequest(http.MethodPost, tt.request, bodyReader)
 			w := httptest.NewRecorder()
 			r.ServeHTTP(w, req)
@@ -75,9 +80,9 @@ func TestCreateShortURL(t *testing.T) {
 }
 
 func TestGetFullURL(t *testing.T) {
-	//Это надо будет переписать, когда разберусь и перепишу storage
-	s := storage.GetStorage()
-	shortURL := s.WriteURL("https://go.dev/tour/welcome/1")
+	repo := storage.NewRepository()
+	flags := config.NewFlags()
+	shortURL, _ := repo.WriteURL("https://go.dev/tour/welcome/1")
 
 	type want struct {
 		code               int
@@ -108,8 +113,10 @@ func TestGetFullURL(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			handler := NewHandlerProvider(repo, flags)
+
 			r := SetUpRouter()
-			r.POST("/:short_url", GetFullURL)
+			r.POST("/:short_url", handler.GetFullURL)
 			req, _ := http.NewRequest(http.MethodPost, tt.request, nil)
 			w := httptest.NewRecorder()
 			r.ServeHTTP(w, req)
