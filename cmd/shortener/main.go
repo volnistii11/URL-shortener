@@ -9,7 +9,9 @@ import (
 func main() {
 	repo := storage.NewRepository()
 	cfg := config.NewFlags()
+	cfg.ParseFlags()
 
 	srv := server.NewRouter()
-	srv.RunServer(repo, cfg)
+	s := srv.Router(repo, cfg)
+	s.Run(cfg.GetServer())
 }
