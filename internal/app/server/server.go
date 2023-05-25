@@ -4,25 +4,32 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/volnistii11/URL-shortener/internal/app/config"
 	"github.com/volnistii11/URL-shortener/internal/app/handlers"
+	"github.com/volnistii11/URL-shortener/internal/app/middlewares"
 	"github.com/volnistii11/URL-shortener/internal/app/storage"
+	"go.uber.org/zap"
 )
 
 type Runner interface {
 	Router(storage.Repository, config.Flags) *gin.Engine
 }
 
-func NewRouter() Runner {
+func NewRouter(logger *zap.Logger) Runner {
 	return &server{
-		httpServer: gin.Default(),
+		httpServer: gin.New(),
+		logger:     logger,
 	}
 }
 
 type server struct {
 	httpServer *gin.Engine
+	logger     *zap.Logger
 }
 
 func (srv *server) Router(repository storage.Repository, cfg config.Flags) *gin.Engine {
 	h := handlers.NewHandlerProvider(repository, cfg)
+	m := middlewares.NewMiddlewareProvider(srv.logger)
+	srv.httpServer.Use(gin.Recovery())
+	srv.httpServer.Use(m.LogHTTPHandler())
 	srv.httpServer.POST("/", h.CreateShortURL)
 	srv.httpServer.GET("/:short_url", h.GetFullURL)
 	return srv.httpServer
