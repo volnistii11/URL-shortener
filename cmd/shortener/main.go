@@ -4,7 +4,7 @@ import (
 	"github.com/volnistii11/URL-shortener/internal/app/config"
 	"github.com/volnistii11/URL-shortener/internal/app/server"
 	"github.com/volnistii11/URL-shortener/internal/app/storage"
-	"github.com/volnistii11/URL-shortener/telemetry"
+	"github.com/volnistii11/URL-shortener/internal/telemetry"
 	"log"
 )
 
