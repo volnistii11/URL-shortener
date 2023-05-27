@@ -60,7 +60,7 @@ func (a *api) CreateShortURL(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
-	respondingServerAddress := fmt.Sprintf("%v://%v%v", scheme, ctx.Request.Host, ctx.Request.RequestURI)
+	respondingServerAddress := fmt.Sprintf("%v://%v/", scheme, ctx.Request.Host)
 	if a.flags.GetRespondingServer() != "" {
 		respondingServerAddress = fmt.Sprintf("%v/", a.flags.GetRespondingServer())
 	}
