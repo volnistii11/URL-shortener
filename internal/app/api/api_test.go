@@ -23,7 +23,7 @@ func TestCreateShortURL(t *testing.T) {
 		contentType string
 	}
 	type request struct {
-		Url string `json:"url,omitempty"`
+		URL string `json:"url,omitempty"`
 	}
 	tests := []struct {
 		name    string
@@ -35,7 +35,7 @@ func TestCreateShortURL(t *testing.T) {
 			name:    "positive test #1",
 			request: "/api/shorten",
 			url: request{
-				Url: "https://practicum.yandex.ru",
+				URL: "https://practicum.yandex.ru",
 			},
 			want: want{
 				code:        201,
@@ -46,7 +46,7 @@ func TestCreateShortURL(t *testing.T) {
 			name:    "negative test - body is empty",
 			request: "/api/shorten",
 			url: request{
-				Url: "",
+				URL: "",
 			},
 			want: want{
 				code:        400,

@@ -27,7 +27,7 @@ type api struct {
 }
 
 type request struct {
-	Url string `json:"url,omitempty"`
+	URL string `json:"url,omitempty"`
 }
 
 type response struct {
