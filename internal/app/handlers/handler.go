@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"errors"
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/volnistii11/URL-shortener/internal/app/config"
 	"github.com/volnistii11/URL-shortener/internal/app/storage"
@@ -55,8 +54,7 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 	if h.flags.GetRespondingServer() != "" {
 		respondingServerAddress = h.flags.GetRespondingServer() + "/"
 	}
-
-	fmt.Println(respondingServerAddress)
+	
 	ctx.String(http.StatusCreated, "%v%v", respondingServerAddress, shortURL)
 }
 
