@@ -32,6 +32,7 @@ func (srv *server) Router(repository storage.Repository, cfg config.Flags) *gin.
 	a := api.NewAPIServiceServer(repository, cfg)
 	srv.httpServer.Use(gin.Recovery())
 	srv.httpServer.Use(m.LogHTTPHandler())
+	srv.httpServer.Use(m.GZIPHandler())
 	srv.httpServer.POST("/", h.CreateShortURL)
 	srv.httpServer.GET("/:short_url", h.GetFullURL)
 	srv.httpServer.POST("/api/shorten", a.CreateShortURL)

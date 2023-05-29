@@ -1,13 +1,17 @@
 package middlewares
 
 import (
+	"compress/gzip"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
+	"io"
+	"strings"
 	"time"
 )
 
 type MiddlewareProvider interface {
 	LogHTTPHandler() gin.HandlerFunc
+	GZIPHandler() gin.HandlerFunc
 }
 
 func NewMiddlewareProvider(logger *zap.Logger) MiddlewareProvider {
@@ -49,25 +53,30 @@ func (m *middleware) LogHTTPHandler() gin.HandlerFunc {
 	}
 }
 
-type (
-	responseData struct {
-		status int
-		size   int
+func (m *middleware) GZIPHandler() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		if !strings.Contains(ctx.GetHeader("Accept-Encoding"), "gzip") {
+			ctx.Next()
+			return
+		}
+
+		if !strings.Contains(ctx.GetHeader("Content-Type"), "application/json") && !strings.Contains(ctx.GetHeader("Content-Type"), "text/html") {
+			ctx.Next()
+			return
+		}
+
+		gz, err := gzip.NewWriterLevel(ctx.Writer, gzip.BestSpeed)
+		if err != nil {
+			io.WriteString(ctx.Writer, err.Error())
+			return
+		}
+		defer gz.Close()
+
+		ctx.Header("Content-Encoding", "gzip")
+		ctx.Writer = &gzipWriter{
+			ResponseWriter: ctx.Writer,
+			Writer:         gz,
+		}
+		ctx.Next()
 	}
-
-	loggingResponseWriter struct {
-		gin.ResponseWriter
-		responseData *responseData
-	}
-)
-
-func (r *loggingResponseWriter) Write(b []byte) (int, error) {
-	size, err := r.ResponseWriter.Write(b)
-	r.responseData.size += size
-	return size, err
-}
-
-func (r *loggingResponseWriter) WriteHeader(statusCode int) {
-	r.ResponseWriter.WriteHeader(statusCode)
-	r.responseData.status = statusCode
 }
