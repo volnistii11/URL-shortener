@@ -80,7 +80,7 @@ func (m *middleware) GZIPHandler() gin.HandlerFunc {
 		//	Writer:         gz,
 		//}
 		//ctx.Next()
-
+		fmt.Println(123)
 		if !strings.Contains(ctx.GetHeader("Content-Encoding"), "gzip") {
 			ctx.Next()
 			return
