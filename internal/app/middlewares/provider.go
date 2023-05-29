@@ -55,7 +55,7 @@ func (m *middleware) LogHTTPHandler() gin.HandlerFunc {
 
 func (m *middleware) GZIPHandler() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		if !strings.Contains(ctx.GetHeader("Accept-Encoding"), "gzip") {
+		if !strings.Contains(ctx.GetHeader("Content-Encoding"), "gzip") {
 			ctx.Next()
 			return
 		}
@@ -72,7 +72,7 @@ func (m *middleware) GZIPHandler() gin.HandlerFunc {
 		}
 		defer gz.Close()
 
-		ctx.Header("Content-Encoding", "gzip")
+		ctx.Header("Accept-Encoding", "gzip")
 		ctx.Writer = &gzipWriter{
 			ResponseWriter: ctx.Writer,
 			Writer:         gz,
