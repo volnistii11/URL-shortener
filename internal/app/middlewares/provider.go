@@ -40,6 +40,7 @@ func (m *middleware) LogHTTPHandler() gin.HandlerFunc {
 
 		uri := ctx.Request.RequestURI
 		method := ctx.Request.Method
+
 		ctx.Next()
 		duration := time.Since(start)
 		m.logger.Sugar().Infow("request data",
@@ -55,28 +56,45 @@ func (m *middleware) LogHTTPHandler() gin.HandlerFunc {
 
 func (m *middleware) GZIPHandler() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		if !strings.Contains(ctx.GetHeader("Accept-Encoding"), "gzip") {
+		//if !strings.Contains(ctx.GetHeader("Accept-Encoding"), "gzip") {
+		//	ctx.Next()
+		//	return
+		//}
+		//
+		//if !strings.Contains(ctx.GetHeader("Content-Type"), "application/json") && !strings.Contains(ctx.GetHeader("Content-Type"), "text/html") {
+		//	ctx.Next()
+		//	return
+		//}
+		//
+		//gz, err := gzip.NewWriterLevel(ctx.Writer, gzip.BestSpeed)
+		//if err != nil {
+		//	io.WriteString(ctx.Writer, err.Error())
+		//	return
+		//}
+		//defer gz.Close()
+		//
+		//ctx.Header("Content-Encoding", "gzip")
+		//ctx.Writer = &gzipWriter{
+		//	ResponseWriter: ctx.Writer,
+		//	Writer:         gz,
+		//}
+		//ctx.Next()
+
+		if !strings.Contains(ctx.GetHeader("Content-Encoding"), "gzip") {
 			ctx.Next()
 			return
 		}
-
 		if !strings.Contains(ctx.GetHeader("Content-Type"), "application/json") && !strings.Contains(ctx.GetHeader("Content-Type"), "text/html") {
 			ctx.Next()
 			return
 		}
 
-		gz, err := gzip.NewWriterLevel(ctx.Writer, gzip.BestSpeed)
+		gz, err := gzip.NewReader(ctx.Request.Body)
 		if err != nil {
 			io.WriteString(ctx.Writer, err.Error())
 			return
 		}
 		defer gz.Close()
-
-		ctx.Header("Content-Encoding", "gzip")
-		ctx.Writer = &gzipWriter{
-			ResponseWriter: ctx.Writer,
-			Writer:         gz,
-		}
 		ctx.Next()
 	}
 }
