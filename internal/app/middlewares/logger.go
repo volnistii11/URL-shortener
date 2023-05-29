@@ -6,8 +6,9 @@ import (
 
 type (
 	responseData struct {
-		status int
-		size   int
+		status   int
+		size     int
+		shortURL string
 	}
 
 	loggingResponseWriter struct {
