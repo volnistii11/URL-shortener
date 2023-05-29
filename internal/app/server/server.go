@@ -30,6 +30,7 @@ func (srv *server) Router(repository storage.Repository, cfg config.Flags) *gin.
 	h := handlers.NewHandlerProvider(repository, cfg)
 	m := middlewares.NewMiddlewareProvider(srv.logger)
 	a := api.NewAPIServiceServer(repository, cfg)
+
 	srv.httpServer.Use(gin.Recovery())
 	srv.httpServer.Use(m.LogHTTPHandler())
 	srv.httpServer.Use(m.GZIPHandler())

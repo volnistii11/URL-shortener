@@ -46,7 +46,6 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 	}
 
 	shortURL, err := h.repo.WriteURL(string(body))
-	fmt.Println(shortURL)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
@@ -64,6 +63,7 @@ func (h *handlerURL) GetFullURL(ctx *gin.Context) {
 	shortURL := ctx.Params.ByName("short_url")
 
 	fullURL, err := h.repo.ReadURL(shortURL)
+	fmt.Println(fullURL)
 
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
