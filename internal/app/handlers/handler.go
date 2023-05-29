@@ -50,6 +50,8 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
+	fmt.Println("body", body)
+	fmt.Println("shortURL", shortURL)
 
 	respondingServerAddress := scheme + "://" + ctx.Request.Host + ctx.Request.RequestURI
 	if h.flags.GetRespondingServer() != "" {
