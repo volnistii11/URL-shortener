@@ -86,7 +86,9 @@ func (m *middleware) GZIPHandler() gin.HandlerFunc {
 			return
 		}
 		fmt.Println(123)
-		if !strings.Contains(ctx.GetHeader("Content-Type"), "application/json") && !strings.Contains(ctx.GetHeader("Content-Type"), "text/html") {
+		if !strings.Contains(ctx.GetHeader("Content-Type"), "application/json") &&
+			!strings.Contains(ctx.GetHeader("Content-Type"), "text/html") &&
+			!strings.Contains(ctx.GetHeader("Content-Type"), "application/x-gzip") {
 			ctx.Next()
 			return
 		}
