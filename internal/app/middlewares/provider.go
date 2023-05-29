@@ -2,6 +2,7 @@ package middlewares
 
 import (
 	"compress/gzip"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"io"
@@ -89,11 +90,13 @@ func (m *middleware) GZIPHandler() gin.HandlerFunc {
 			return
 		}
 
+		fmt.Println(123)
 		gz, err := gzip.NewReader(ctx.Request.Body)
 		if err != nil {
 			io.WriteString(ctx.Writer, err.Error())
 			return
 		}
+		fmt.Println("gz", gz)
 		ctx.Request.Body = gz
 		ctx.Request.Body.Close()
 		defer gz.Close()
