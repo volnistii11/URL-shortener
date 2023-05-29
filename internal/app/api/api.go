@@ -56,9 +56,6 @@ func (a *api) CreateShortURL(ctx *gin.Context) {
 		return
 	}
 	shortURL, err := a.repo.WriteURL(bufRequest.URL)
-	fmt.Println("body", string(body))
-	fmt.Println("bufRequest.URL", bufRequest.URL)
-	fmt.Println("shortURL", shortURL)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return

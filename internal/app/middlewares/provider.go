@@ -57,43 +57,10 @@ func (m *middleware) LogHTTPHandler() gin.HandlerFunc {
 
 func (m *middleware) GZIPHandler() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		//if !strings.Contains(ctx.GetHeader("Accept-Encoding"), "gzip") {
-		//	ctx.Next()
-		//	return
-		//}
-		//
-		//if !strings.Contains(ctx.GetHeader("Content-Type"), "application/json") && !strings.Contains(ctx.GetHeader("Content-Type"), "text/html") {
-		//	ctx.Next()
-		//	return
-		//}
-		//
-		//gz, err := gzip.NewWriterLevel(ctx.Writer, gzip.BestSpeed)
-		//if err != nil {
-		//	io.WriteString(ctx.Writer, err.Error())
-		//	return
-		//}
-		//defer gz.Close()
-		//
-		//ctx.Header("Content-Encoding", "gzip")
-		//ctx.Writer = &gzipWriter{
-		//	ResponseWriter: ctx.Writer,
-		//	Writer:         gz,
-		//}
-		//ctx.Next()
-		fmt.Println(123)
 		if !strings.Contains(ctx.GetHeader("Content-Encoding"), "gzip") {
 			ctx.Next()
 			return
 		}
-		fmt.Println(123)
-		if !strings.Contains(ctx.GetHeader("Content-Type"), "application/json") &&
-			!strings.Contains(ctx.GetHeader("Content-Type"), "text/html") &&
-			!strings.Contains(ctx.GetHeader("Content-Type"), "application/x-gzip") {
-			ctx.Next()
-			return
-		}
-
-		fmt.Println(123)
 		gz, err := gzip.NewReader(ctx.Request.Body)
 		if err != nil {
 			io.WriteString(ctx.Writer, err.Error())
@@ -103,6 +70,24 @@ func (m *middleware) GZIPHandler() gin.HandlerFunc {
 		ctx.Request.Body = gz
 		ctx.Request.Body.Close()
 		defer gz.Close()
+
+		if !strings.Contains(ctx.GetHeader("Accept-Encoding"), "gzip") {
+			ctx.Next()
+			return
+		}
+		gzResponse, errResponse := gzip.NewWriterLevel(ctx.Writer, gzip.BestSpeed)
+		if errResponse != nil {
+			io.WriteString(ctx.Writer, errResponse.Error())
+			return
+		}
+		defer gzResponse.Close()
+
+		ctx.Header("Content-Encoding", "gzip")
+		ctx.Writer = &gzipWriter{
+			ResponseWriter: ctx.Writer,
+			Writer:         gzResponse,
+		}
+
 		ctx.Next()
 	}
 }
