@@ -94,6 +94,8 @@ func (m *middleware) GZIPHandler() gin.HandlerFunc {
 			io.WriteString(ctx.Writer, err.Error())
 			return
 		}
+		ctx.Request.Body = gz
+		ctx.Request.Body.Close()
 		defer gz.Close()
 		ctx.Next()
 	}
