@@ -46,24 +46,28 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 		scheme = "https"
 	}
 
-	Producer, _ := file_storage.NewProducer(h.flags.GetFileStoragePath())
-	defer Producer.Close()
-	bufEvent := file_storage.Event{}
-	_ = json.Unmarshal(body, &bufEvent)
-	Producer.WriteEvent(&bufEvent)
-
-	//shortURL, err := h.repo.WriteURL(string(body))
-	//if err != nil {
-	//	ctx.JSON(http.StatusBadRequest, errorResponse(err))
-	//	return
-	//}
+	var shortURL string
+	if h.flags.GetFileStoragePath() == "" {
+		shortURL, err = h.repo.WriteURL(string(body))
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, errorResponse(err))
+			return
+		}
+	} else {
+		Producer, _ := file_storage.NewProducer(h.flags.GetFileStoragePath())
+		defer Producer.Close()
+		bufEvent := file_storage.Event{}
+		_ = json.Unmarshal(body, &bufEvent)
+		Producer.WriteEvent(&bufEvent)
+		shortURL = bufEvent.ShortURL
+	}
 
 	respondingServerAddress := scheme + "://" + ctx.Request.Host + ctx.Request.RequestURI
 	if h.flags.GetRespondingServer() != "" {
 		respondingServerAddress = h.flags.GetRespondingServer() + "/"
 	}
 
-	ctx.String(http.StatusCreated, "%v%v", respondingServerAddress, bufEvent.ShortURL)
+	ctx.String(http.StatusCreated, "%v%v", respondingServerAddress, shortURL)
 }
 
 func (h *handlerURL) GetFullURL(ctx *gin.Context) {
