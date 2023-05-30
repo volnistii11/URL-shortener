@@ -47,7 +47,7 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 	}
 
 	var originalURL string
-	if h.flags.GetFileStoragePath() == "" || ctx.Request.Header.Get("Content-Type") != "application/json" {
+	if h.flags.GetFileStoragePath() == "" {
 		originalURL = string(body)
 	} else {
 		Producer, _ := file_storage.NewProducer(h.flags.GetFileStoragePath())

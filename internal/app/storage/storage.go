@@ -32,9 +32,9 @@ func (storage *url) ReadURL(id string) (string, error) {
 func (storage *url) WriteURL(url string) (string, error) {
 	shortURL := utils.RandString(10)
 	storage.urlDependency[shortURL] = url
-	if len(storage.urlDependency[shortURL]) < 10 {
-		return shortURL, errors.New("error in short link generation, link length is less than 10")
-	}
+	//if len(storage.urlDependency[shortURL]) < 10 {
+	//	return shortURL, errors.New("error in short link generation, link length is less than 10")
+	//}
 	return shortURL, nil
 }
 
