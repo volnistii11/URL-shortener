@@ -47,7 +47,7 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 	}
 
 	var originalURL string
-	if h.flags.GetFileStoragePath() == "" || ctx.Request.Header.Get("Content-Type") != "application/json" {
+	if h.flags.GetFileStoragePath() == "" {
 		originalURL = string(body)
 	} else {
 		Producer, _ := file_storage.NewProducer(h.flags.GetFileStoragePath())
@@ -56,6 +56,9 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 		_ = json.Unmarshal(body, &bufEvent)
 		Producer.WriteEvent(&bufEvent)
 		originalURL = bufEvent.OriginalURL
+		if len(originalURL) == 0 {
+			originalURL = string(body)
+		}
 	}
 	shortURL, err2 := h.repo.WriteURL(originalURL)
 	if err2 != nil {
