@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"github.com/volnistii11/URL-shortener/internal/app/config"
 	"github.com/volnistii11/URL-shortener/internal/app/storage"
+	"log"
 	"os"
 )
 
@@ -114,7 +115,10 @@ type restoredURL struct {
 }
 
 func (r *restoredURL) RestoreDataFromJSONFileToStructure() storage.Repository {
-	Consumer, _ := NewConsumer(r.flags.GetFileStoragePath())
+	Consumer, err := NewConsumer(r.flags.GetFileStoragePath())
+	if err != nil {
+		log.Fatal(err)
+	}
 	defer Consumer.Close()
 	for {
 		readEvent, _ := Consumer.ReadEvent()

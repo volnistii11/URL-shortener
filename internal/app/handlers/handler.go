@@ -46,20 +46,21 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 		scheme = "https"
 	}
 
-	var shortURL string
+	var originalURL string
 	if h.flags.GetFileStoragePath() == "" {
-		shortURL, err = h.repo.WriteURL(string(body))
-		if err != nil {
-			ctx.JSON(http.StatusBadRequest, errorResponse(err))
-			return
-		}
+		originalURL = string(body)
 	} else {
 		Producer, _ := file_storage.NewProducer(h.flags.GetFileStoragePath())
 		defer Producer.Close()
 		bufEvent := file_storage.Event{}
 		_ = json.Unmarshal(body, &bufEvent)
 		Producer.WriteEvent(&bufEvent)
-		shortURL = bufEvent.ShortURL
+		originalURL = bufEvent.OriginalURL
+	}
+	shortURL, err2 := h.repo.WriteURL(originalURL)
+	if err2 != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err2))
+		return
 	}
 
 	respondingServerAddress := scheme + "://" + ctx.Request.Host + ctx.Request.RequestURI
