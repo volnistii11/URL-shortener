@@ -53,10 +53,10 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 	Producer.WriteEvent(&bufEvent)
 
 	//shortURL, err := h.repo.WriteURL(string(body))
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, errorResponse(err))
-		return
-	}
+	//if err != nil {
+	//	ctx.JSON(http.StatusBadRequest, errorResponse(err))
+	//	return
+	//}
 
 	respondingServerAddress := scheme + "://" + ctx.Request.Host + ctx.Request.RequestURI
 	if h.flags.GetRespondingServer() != "" {
