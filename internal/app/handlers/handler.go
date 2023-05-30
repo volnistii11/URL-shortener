@@ -1,11 +1,13 @@
 package handlers
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/volnistii11/URL-shortener/internal/app/config"
 	"github.com/volnistii11/URL-shortener/internal/app/storage"
+	file_storage "github.com/volnistii11/URL-shortener/internal/app/storage/file-storage"
 	"net/http"
 )
 
@@ -45,7 +47,13 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 		scheme = "https"
 	}
 
-	shortURL, err := h.repo.WriteURL(string(body))
+	Producer, _ := file_storage.NewProducer(h.flags.GetFileStoragePath())
+	defer Producer.Close()
+	bufEvent := file_storage.Event{}
+	_ = json.Unmarshal(body, &bufEvent)
+	Producer.WriteEvent(&bufEvent)
+
+	//shortURL, err := h.repo.WriteURL(string(body))
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
@@ -56,14 +64,14 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 		respondingServerAddress = h.flags.GetRespondingServer() + "/"
 	}
 
-	ctx.String(http.StatusCreated, "%v%v", respondingServerAddress, shortURL)
+	ctx.String(http.StatusCreated, "%v%v", respondingServerAddress, bufEvent.ShortURL)
 }
 
 func (h *handlerURL) GetFullURL(ctx *gin.Context) {
 	shortURL := ctx.Params.ByName("short_url")
 
+	fmt.Println(h.repo)
 	fullURL, err := h.repo.ReadURL(shortURL)
-	fmt.Println(fullURL)
 
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
