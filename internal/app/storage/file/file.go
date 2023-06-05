@@ -102,7 +102,7 @@ type Restorer interface {
 	RestoreDataFromJSONFileToStructure() storage.Repository
 }
 
-func NewSetter(repository storage.Repository, cfg config.Flags) Restorer {
+func NewRestorer(repository storage.Repository, cfg config.Flags) Restorer {
 	return &restoredURL{
 		repo:  repository,
 		flags: cfg,

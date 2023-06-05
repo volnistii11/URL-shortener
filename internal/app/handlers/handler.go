@@ -50,10 +50,16 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 	if h.flags.GetFileStoragePath() == "" {
 		originalURL = string(body)
 	} else {
-		Producer, _ := file_storage.NewProducer(h.flags.GetFileStoragePath())
+		Producer, err := file_storage.NewProducer(h.flags.GetFileStoragePath())
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		}
 		defer Producer.Close()
 		bufEvent := file_storage.Event{}
-		_ = json.Unmarshal(body, &bufEvent)
+		err = json.Unmarshal(body, &bufEvent)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		}
 		Producer.WriteEvent(&bufEvent)
 		originalURL = bufEvent.OriginalURL
 		if len(originalURL) == 0 {

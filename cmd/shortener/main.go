@@ -19,11 +19,11 @@ func main() {
 		log.Printf("Error : %v\n", err)
 	}
 	defer logger.Sync()
-	r := server.NewRouter(logger)
 
+	r := server.NewRouter(logger)
 	var s *gin.Engine
 	if cfg.GetFileStoragePath() != "" {
-		fileStorage := file.NewSetter(repo, cfg)
+		fileStorage := file.NewRestorer(repo, cfg)
 		s = r.Router(fileStorage.RestoreDataFromJSONFileToStructure(), cfg)
 	} else {
 		s = r.Router(repo, cfg)
