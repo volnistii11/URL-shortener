@@ -2,12 +2,14 @@ package storage
 
 import (
 	"errors"
+	
 	"github.com/volnistii11/URL-shortener/internal/app/utils"
 )
 
 type Repository interface {
 	ReadURL(id string) (string, error)
 	WriteURL(url string) (string, error)
+	SetRestoreData(shortURL string, originalURL string)
 }
 
 func NewRepository() Repository {
@@ -35,4 +37,8 @@ func (storage *url) WriteURL(url string) (string, error) {
 		return shortURL, errors.New("error in short link generation, link length is less than 10")
 	}
 	return shortURL, nil
+}
+
+func (storage *url) SetRestoreData(shortURL string, originalURL string) {
+	storage.urlDependency[shortURL] = originalURL
 }

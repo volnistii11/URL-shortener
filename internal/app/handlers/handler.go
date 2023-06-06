@@ -1,12 +1,15 @@
 package handlers
 
 import (
+	"encoding/json"
 	"errors"
-	"fmt"
-	"github.com/gin-gonic/gin"
+	"net/http"
+
 	"github.com/volnistii11/URL-shortener/internal/app/config"
 	"github.com/volnistii11/URL-shortener/internal/app/storage"
-	"net/http"
+	"github.com/volnistii11/URL-shortener/internal/app/storage/file"
+
+	"github.com/gin-gonic/gin"
 )
 
 type HandlerProvider interface {
@@ -45,10 +48,35 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 		scheme = "https"
 	}
 
-	shortURL, err := h.repo.WriteURL(string(body))
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, errorResponse(err))
-		return
+	var shortURL string
+	if h.flags.GetFileStoragePath() == "" {
+		originalURL := string(body)
+		shortURL, err = h.repo.WriteURL(originalURL)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, errorResponse(err))
+			return
+		}
+	} else {
+		Producer, err := file.NewProducer(h.flags.GetFileStoragePath())
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, errorResponse(err))
+			return
+		}
+		defer Producer.Close()
+		bufEvent := file.Event{}
+		err = json.Unmarshal(body, &bufEvent)
+		if err != nil {
+			bufEvent.OriginalURL = string(body)
+			shortURL, err = h.repo.WriteURL(bufEvent.OriginalURL)
+			if err != nil {
+				ctx.JSON(http.StatusBadRequest, errorResponse(err))
+				return
+			}
+			bufEvent.ShortURL = shortURL
+		} else {
+			shortURL = bufEvent.ShortURL
+		}
+		Producer.WriteEvent(&bufEvent)
 	}
 
 	respondingServerAddress := scheme + "://" + ctx.Request.Host + ctx.Request.RequestURI
@@ -56,7 +84,6 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 		respondingServerAddress = h.flags.GetRespondingServer() + "/"
 	}
 
-	fmt.Println(respondingServerAddress)
 	ctx.String(http.StatusCreated, "%v%v", respondingServerAddress, shortURL)
 }
 
