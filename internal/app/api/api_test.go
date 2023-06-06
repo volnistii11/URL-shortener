@@ -3,13 +3,15 @@ package api
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/gin-gonic/gin"
-	"github.com/stretchr/testify/assert"
-	"github.com/volnistii11/URL-shortener/internal/app/config"
-	"github.com/volnistii11/URL-shortener/internal/app/storage"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/volnistii11/URL-shortener/internal/app/config"
+	"github.com/volnistii11/URL-shortener/internal/app/storage"
+
+	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
 )
 
 func SetUpRouter() *gin.Engine {

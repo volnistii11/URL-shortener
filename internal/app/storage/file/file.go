@@ -3,10 +3,11 @@ package file
 import (
 	"bufio"
 	"encoding/json"
-	"github.com/volnistii11/URL-shortener/internal/app/config"
-	"github.com/volnistii11/URL-shortener/internal/app/storage"
 	"log"
 	"os"
+
+	"github.com/volnistii11/URL-shortener/internal/app/config"
+	"github.com/volnistii11/URL-shortener/internal/app/storage"
 )
 
 type Event struct {

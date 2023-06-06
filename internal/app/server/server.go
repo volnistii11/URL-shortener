@@ -1,12 +1,13 @@
 package server
 
 import (
-	"github.com/gin-gonic/gin"
 	"github.com/volnistii11/URL-shortener/internal/app/api"
 	"github.com/volnistii11/URL-shortener/internal/app/config"
 	"github.com/volnistii11/URL-shortener/internal/app/handlers"
 	"github.com/volnistii11/URL-shortener/internal/app/middlewares"
 	"github.com/volnistii11/URL-shortener/internal/app/storage"
+
+	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
 

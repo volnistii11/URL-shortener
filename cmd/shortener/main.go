@@ -1,13 +1,15 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
+	"log"
+
 	"github.com/volnistii11/URL-shortener/internal/app/config"
 	"github.com/volnistii11/URL-shortener/internal/app/server"
 	"github.com/volnistii11/URL-shortener/internal/app/storage"
 	"github.com/volnistii11/URL-shortener/internal/app/storage/file"
 	"github.com/volnistii11/URL-shortener/internal/telemetry"
-	"log"
+
+	"github.com/gin-gonic/gin"
 )
 
 func main() {

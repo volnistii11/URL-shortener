@@ -3,11 +3,12 @@ package middlewares
 import (
 	"compress/gzip"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"go.uber.org/zap"
 	"io"
 	"strings"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 type MiddlewareProvider interface {

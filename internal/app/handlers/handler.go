@@ -3,11 +3,13 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
-	"github.com/gin-gonic/gin"
+	"net/http"
+
 	"github.com/volnistii11/URL-shortener/internal/app/config"
 	"github.com/volnistii11/URL-shortener/internal/app/storage"
-	file_storage "github.com/volnistii11/URL-shortener/internal/app/storage/file"
-	"net/http"
+	"github.com/volnistii11/URL-shortener/internal/app/storage/file"
+
+	"github.com/gin-gonic/gin"
 )
 
 type HandlerProvider interface {
@@ -50,12 +52,12 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 	if h.flags.GetFileStoragePath() == "" {
 		originalURL = string(body)
 	} else {
-		Producer, err := file_storage.NewProducer(h.flags.GetFileStoragePath())
+		Producer, err := file.NewProducer(h.flags.GetFileStoragePath())
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		}
 		defer Producer.Close()
-		bufEvent := file_storage.Event{}
+		bufEvent := file.Event{}
 		err = json.Unmarshal(body, &bufEvent)
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, errorResponse(err))
