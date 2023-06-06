@@ -49,8 +49,14 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 	}
 
 	var originalURL string
+	var shortURL string
 	if h.flags.GetFileStoragePath() == "" {
 		originalURL = string(body)
+		shortURL, err = h.repo.WriteURL(originalURL)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, errorResponse(err))
+			return
+		}
 	} else {
 		Producer, err := file.NewProducer(h.flags.GetFileStoragePath())
 		if err != nil {
@@ -60,17 +66,19 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 		defer Producer.Close()
 		bufEvent := file.Event{}
 		err = json.Unmarshal(body, &bufEvent)
-		if err == nil {
-			Producer.WriteEvent(&bufEvent)
-			originalURL = bufEvent.OriginalURL
+		if err != nil {
+			bufEvent.OriginalURL = string(body)
+			shortURL, err = h.repo.WriteURL(bufEvent.OriginalURL)
+			if err != nil {
+				ctx.JSON(http.StatusBadRequest, errorResponse(err))
+				return
+			}
+			bufEvent.ShortURL = shortURL
 		} else {
-			originalURL = string(body)
+			shortURL = bufEvent.ShortURL
 		}
-	}
-	shortURL, err2 := h.repo.WriteURL(originalURL)
-	if err2 != nil {
-		ctx.JSON(http.StatusBadRequest, errorResponse(err2))
-		return
+		Producer.WriteEvent(&bufEvent)
+		originalURL = bufEvent.OriginalURL
 	}
 
 	respondingServerAddress := scheme + "://" + ctx.Request.Host + ctx.Request.RequestURI
