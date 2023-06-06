@@ -48,10 +48,9 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 		scheme = "https"
 	}
 
-	var originalURL string
 	var shortURL string
 	if h.flags.GetFileStoragePath() == "" {
-		originalURL = string(body)
+		originalURL := string(body)
 		shortURL, err = h.repo.WriteURL(originalURL)
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, errorResponse(err))
@@ -78,7 +77,6 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 			shortURL = bufEvent.ShortURL
 		}
 		Producer.WriteEvent(&bufEvent)
-		originalURL = bufEvent.OriginalURL
 	}
 
 	respondingServerAddress := scheme + "://" + ctx.Request.Host + ctx.Request.RequestURI
