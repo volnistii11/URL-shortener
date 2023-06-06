@@ -55,16 +55,15 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 		Producer, err := file.NewProducer(h.flags.GetFileStoragePath())
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, errorResponse(err))
+			return
 		}
 		defer Producer.Close()
 		bufEvent := file.Event{}
 		err = json.Unmarshal(body, &bufEvent)
-		if err != nil {
-			ctx.JSON(http.StatusBadRequest, errorResponse(err))
-		}
-		Producer.WriteEvent(&bufEvent)
-		originalURL = bufEvent.OriginalURL
-		if len(originalURL) == 0 {
+		if err == nil {
+			Producer.WriteEvent(&bufEvent)
+			originalURL = bufEvent.OriginalURL
+		} else {
 			originalURL = string(body)
 		}
 	}
