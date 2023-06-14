@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/volnistii11/URL-shortener/internal/app/config"
 	"github.com/volnistii11/URL-shortener/internal/app/storage"
@@ -15,6 +16,7 @@ import (
 type HandlerProvider interface {
 	CreateShortURL(ctx *gin.Context)
 	GetFullURL(ctx *gin.Context)
+	PingDatabaseServer(ctx *gin.Context)
 }
 
 func NewHandlerProvider(repository storage.Repository, cfg config.Flags) HandlerProvider {
@@ -79,6 +81,9 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 		Producer.WriteEvent(&bufEvent)
 	}
 
+	var a time.Time
+	a.String()
+
 	respondingServerAddress := scheme + "://" + ctx.Request.Host + ctx.Request.RequestURI
 	if h.flags.GetRespondingServer() != "" {
 		respondingServerAddress = h.flags.GetRespondingServer() + "/"
@@ -98,6 +103,14 @@ func (h *handlerURL) GetFullURL(ctx *gin.Context) {
 	}
 	ctx.Header("Location", fullURL)
 	ctx.Status(http.StatusTemporaryRedirect)
+}
+
+func (h *handlerURL) PingDatabaseServer(ctx *gin.Context) {
+	if err := h.repo.GetDatabase().Ping(); err != nil {
+		ctx.Status(http.StatusBadRequest)
+		return
+	}
+	ctx.Status(http.StatusOK)
 }
 
 func errorResponse(err error) gin.H {

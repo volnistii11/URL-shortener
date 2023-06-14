@@ -2,7 +2,7 @@ package storage
 
 import (
 	"errors"
-	
+	"github.com/jmoiron/sqlx"
 	"github.com/volnistii11/URL-shortener/internal/app/utils"
 )
 
@@ -10,16 +10,19 @@ type Repository interface {
 	ReadURL(id string) (string, error)
 	WriteURL(url string) (string, error)
 	SetRestoreData(shortURL string, originalURL string)
+	GetDatabase() *sqlx.DB
 }
 
-func NewRepository() Repository {
+func NewRepository(db *sqlx.DB) Repository {
 	return &url{
 		urlDependency: map[string]string{},
+		db:            db,
 	}
 }
 
 type url struct {
 	urlDependency map[string]string
+	db            *sqlx.DB
 }
 
 func (storage *url) ReadURL(id string) (string, error) {
@@ -41,4 +44,8 @@ func (storage *url) WriteURL(url string) (string, error) {
 
 func (storage *url) SetRestoreData(shortURL string, originalURL string) {
 	storage.urlDependency[shortURL] = originalURL
+}
+
+func (storage *url) GetDatabase() *sqlx.DB {
+	return storage.db
 }
