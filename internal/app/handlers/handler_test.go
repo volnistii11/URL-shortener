@@ -57,7 +57,7 @@ func TestCreateShortURL(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			bodyReader := strings.NewReader(tt.requestBody)
 
-			repo := storage.NewRepository()
+			repo := storage.NewRepository(nil)
 			flags := config.NewFlags()
 			handler := NewHandlerProvider(repo, flags)
 
@@ -82,7 +82,7 @@ func TestCreateShortURL(t *testing.T) {
 }
 
 func TestGetFullURL(t *testing.T) {
-	repo := storage.NewRepository()
+	repo := storage.NewRepository(nil)
 	flags := config.NewFlags()
 	shortURL, _ := repo.WriteURL("https://go.dev/tour/welcome/1")
 
