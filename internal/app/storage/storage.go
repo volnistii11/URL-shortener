@@ -2,8 +2,10 @@ package storage
 
 import (
 	"errors"
-	"github.com/jmoiron/sqlx"
+
 	"github.com/volnistii11/URL-shortener/internal/app/utils"
+
+	"github.com/jmoiron/sqlx"
 )
 
 type Repository interface {

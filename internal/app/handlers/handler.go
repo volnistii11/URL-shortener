@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
+	"github.com/volnistii11/URL-shortener/internal/app/storage/database"
 	"net/http"
 
 	"github.com/volnistii11/URL-shortener/internal/app/config"
@@ -54,7 +55,21 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 
 	switch h.GetStorageType() {
 	case "database":
-
+		db := database.NewInitializerReaderWriter(h.repo, h.flags)
+		if err := db.CreateTableIfNotExists(); err != nil {
+			ctx.JSON(http.StatusBadRequest, errorResponse(err))
+			return
+		}
+		urls := database.RequestSchema{}
+		err := json.Unmarshal(body, &urls)
+		if err != nil {
+			urls.OriginalURL = string(body)
+		}
+		shortURL, err = db.WriteURL(&urls)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, errorResponse(err))
+			return
+		}
 	case "file":
 		Producer, err := file.NewProducer(h.flags.GetFileStoragePath())
 		if err != nil {
@@ -84,35 +99,6 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 			return
 		}
 	}
-	//if h.flags.GetFileStoragePath() == "" {
-	//	originalURL := string(body)
-	//	shortURL, err = h.repo.WriteURL(originalURL)
-	//	if err != nil {
-	//		ctx.JSON(http.StatusBadRequest, errorResponse(err))
-	//		return
-	//	}
-	//} else {
-	//	Producer, err := file.NewProducer(h.flags.GetFileStoragePath())
-	//	if err != nil {
-	//		ctx.JSON(http.StatusBadRequest, errorResponse(err))
-	//		return
-	//	}
-	//	defer Producer.Close()
-	//	bufEvent := file.Event{}
-	//	err = json.Unmarshal(body, &bufEvent)
-	//	if err != nil {
-	//		bufEvent.OriginalURL = string(body)
-	//		shortURL, err = h.repo.WriteURL(bufEvent.OriginalURL)
-	//		if err != nil {
-	//			ctx.JSON(http.StatusBadRequest, errorResponse(err))
-	//			return
-	//		}
-	//		bufEvent.ShortURL = shortURL
-	//	} else {
-	//		shortURL = bufEvent.ShortURL
-	//	}
-	//	Producer.WriteEvent(&bufEvent)
-	//}
 
 	respondingServerAddress := scheme + "://" + ctx.Request.Host + ctx.Request.RequestURI
 	if h.flags.GetRespondingServer() != "" {
@@ -123,9 +109,18 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 }
 
 func (h *handlerURL) GetFullURL(ctx *gin.Context) {
+
+	var fullURL string
+	var err error
 	shortURL := ctx.Params.ByName("short_url")
 
-	fullURL, err := h.repo.ReadURL(shortURL)
+	switch h.GetStorageType() {
+	case "database":
+		db := database.NewInitializerReaderWriter(h.repo, h.flags)
+		fullURL, err = db.ReadURL(shortURL)
+	default:
+		fullURL, err = h.repo.ReadURL(shortURL)
+	}
 
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
