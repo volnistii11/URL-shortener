@@ -3,12 +3,10 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
-	"net/http"
-	"time"
-
 	"github.com/volnistii11/URL-shortener/internal/app/config"
 	"github.com/volnistii11/URL-shortener/internal/app/storage"
 	"github.com/volnistii11/URL-shortener/internal/app/storage/file"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
@@ -80,10 +78,7 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 		}
 		Producer.WriteEvent(&bufEvent)
 	}
-
-	var a time.Time
-	a.String()
-
+	
 	respondingServerAddress := scheme + "://" + ctx.Request.Host + ctx.Request.RequestURI
 	if h.flags.GetRespondingServer() != "" {
 		respondingServerAddress = h.flags.GetRespondingServer() + "/"
