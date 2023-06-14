@@ -3,10 +3,11 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
+	"net/http"
+
 	"github.com/volnistii11/URL-shortener/internal/app/config"
 	"github.com/volnistii11/URL-shortener/internal/app/storage"
 	"github.com/volnistii11/URL-shortener/internal/app/storage/file"
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
@@ -55,13 +56,6 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 	case "database":
 
 	case "file":
-		originalURL := string(body)
-		shortURL, err = h.repo.WriteURL(originalURL)
-		if err != nil {
-			ctx.JSON(http.StatusBadRequest, errorResponse(err))
-			return
-		}
-	case "memory":
 		Producer, err := file.NewProducer(h.flags.GetFileStoragePath())
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, errorResponse(err))
@@ -82,6 +76,13 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 			shortURL = bufEvent.ShortURL
 		}
 		Producer.WriteEvent(&bufEvent)
+	case "memory":
+		originalURL := string(body)
+		shortURL, err = h.repo.WriteURL(originalURL)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, errorResponse(err))
+			return
+		}
 	}
 	//if h.flags.GetFileStoragePath() == "" {
 	//	originalURL := string(body)
