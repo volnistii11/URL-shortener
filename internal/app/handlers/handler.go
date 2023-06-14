@@ -15,6 +15,7 @@ type HandlerProvider interface {
 	CreateShortURL(ctx *gin.Context)
 	GetFullURL(ctx *gin.Context)
 	PingDatabaseServer(ctx *gin.Context)
+	GetStorageType() string
 }
 
 func NewHandlerProvider(repository storage.Repository, cfg config.Flags) HandlerProvider {
@@ -49,14 +50,18 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 	}
 
 	var shortURL string
-	if h.flags.GetFileStoragePath() == "" {
+
+	switch h.GetStorageType() {
+	case "database":
+
+	case "file":
 		originalURL := string(body)
 		shortURL, err = h.repo.WriteURL(originalURL)
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, errorResponse(err))
 			return
 		}
-	} else {
+	case "memory":
 		Producer, err := file.NewProducer(h.flags.GetFileStoragePath())
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, errorResponse(err))
@@ -78,7 +83,36 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 		}
 		Producer.WriteEvent(&bufEvent)
 	}
-	
+	//if h.flags.GetFileStoragePath() == "" {
+	//	originalURL := string(body)
+	//	shortURL, err = h.repo.WriteURL(originalURL)
+	//	if err != nil {
+	//		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+	//		return
+	//	}
+	//} else {
+	//	Producer, err := file.NewProducer(h.flags.GetFileStoragePath())
+	//	if err != nil {
+	//		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+	//		return
+	//	}
+	//	defer Producer.Close()
+	//	bufEvent := file.Event{}
+	//	err = json.Unmarshal(body, &bufEvent)
+	//	if err != nil {
+	//		bufEvent.OriginalURL = string(body)
+	//		shortURL, err = h.repo.WriteURL(bufEvent.OriginalURL)
+	//		if err != nil {
+	//			ctx.JSON(http.StatusBadRequest, errorResponse(err))
+	//			return
+	//		}
+	//		bufEvent.ShortURL = shortURL
+	//	} else {
+	//		shortURL = bufEvent.ShortURL
+	//	}
+	//	Producer.WriteEvent(&bufEvent)
+	//}
+
 	respondingServerAddress := scheme + "://" + ctx.Request.Host + ctx.Request.RequestURI
 	if h.flags.GetRespondingServer() != "" {
 		respondingServerAddress = h.flags.GetRespondingServer() + "/"
@@ -106,6 +140,16 @@ func (h *handlerURL) PingDatabaseServer(ctx *gin.Context) {
 		return
 	}
 	ctx.Status(http.StatusOK)
+}
+
+func (h *handlerURL) GetStorageType() string {
+	if h.flags.GetDatabaseDSN() != "" {
+		return "database"
+	} else if h.flags.GetFileStoragePath() != "" {
+		return "file"
+	} else {
+		return "memory"
+	}
 }
 
 func errorResponse(err error) gin.H {
