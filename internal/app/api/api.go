@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/volnistii11/URL-shortener/internal/app/storage/database"
 	"github.com/volnistii11/URL-shortener/internal/app/storage/file"
 	"github.com/volnistii11/URL-shortener/internal/app/utils"
@@ -57,20 +59,47 @@ func (a *api) CreateShortURL(ctx *gin.Context) {
 	if ctx.Request.TLS != nil {
 		scheme = "https"
 	}
+	respondingServerAddress := fmt.Sprintf("%v://%v/", scheme, ctx.Request.Host)
+	if a.flags.GetRespondingServer() != "" {
+		respondingServerAddress = fmt.Sprintf("%v/", a.flags.GetRespondingServer())
+	}
+
 	bufRequest := request{}
 	if err = json.Unmarshal(body, &bufRequest); err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
-	shortURL, err := a.repo.WriteURL(bufRequest.URL)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, errorResponse(err))
-		return
+
+	var shortURL string
+
+	switch a.GetStorageType() {
+	case "database":
+		db := database.NewInitializerReaderWriter(a.repo, a.flags)
+		if err := db.CreateTableIfNotExists(); err != nil {
+			ctx.JSON(http.StatusBadRequest, errorResponse(err))
+			return
+		}
+
+		shortURL, err = db.WriteURL(&storage.URLStorage{OriginalURL: bufRequest.URL})
+		if err != nil {
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) {
+				if pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
+					ctx.String(http.StatusConflict, "%v%v", respondingServerAddress, shortURL)
+					return
+				}
+			}
+			ctx.JSON(http.StatusBadRequest, errorResponse(err))
+			return
+		}
+	default:
+		shortURL, err = a.repo.WriteURL(bufRequest.URL)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, errorResponse(err))
+			return
+		}
 	}
-	respondingServerAddress := fmt.Sprintf("%v://%v/", scheme, ctx.Request.Host)
-	if a.flags.GetRespondingServer() != "" {
-		respondingServerAddress = fmt.Sprintf("%v/", a.flags.GetRespondingServer())
-	}
+
 	buffResponse := response{
 		Result: fmt.Sprintf("%v%v", respondingServerAddress, shortURL),
 	}
