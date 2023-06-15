@@ -10,13 +10,6 @@ import (
 	"github.com/volnistii11/URL-shortener/internal/app/storage"
 )
 
-type Event struct {
-	ID            uint   `json:"uuid,string,omitempty"`
-	CorrelationID string `json:"correlation_id,omitempty"`
-	ShortURL      string `json:"short_url,omitempty"`
-	OriginalURL   string `json:"original_url,omitempty"`
-}
-
 type Producer struct {
 	file *os.File
 	// добавляем Writer в Producer
@@ -36,7 +29,7 @@ func NewProducer(filename string) (*Producer, error) {
 	}, nil
 }
 
-func (p *Producer) WriteEvent(event *Event) error {
+func (p *Producer) WriteEvent(event *storage.URLStorage) error {
 	data, err := json.Marshal(&event)
 	if err != nil {
 		return err
@@ -79,7 +72,7 @@ func NewConsumer(filename string) (*Consumer, error) {
 	}, nil
 }
 
-func (c *Consumer) ReadEvent() (*Event, error) {
+func (c *Consumer) ReadEvent() (*storage.URLStorage, error) {
 	// читаем данные до символа переноса строки
 	data, err := c.reader.ReadBytes('\n')
 	if err != nil {
@@ -87,7 +80,7 @@ func (c *Consumer) ReadEvent() (*Event, error) {
 	}
 
 	// преобразуем данные из JSON-представления в структуру
-	event := Event{}
+	event := storage.URLStorage{}
 	err = json.Unmarshal(data, &event)
 	if err != nil {
 		return nil, err

@@ -92,7 +92,7 @@ func (a *api) CreateShortURLBatch(ctx *gin.Context) {
 
 	switch a.GetStorageType() {
 	case "database":
-		var urls []database.RequestSchema
+		var urls []storage.URLStorage
 		if err = json.Unmarshal(body, &urls); err != nil {
 			ctx.JSON(http.StatusBadRequest, errorResponse(err))
 			return
@@ -111,7 +111,7 @@ func (a *api) CreateShortURLBatch(ctx *gin.Context) {
 		}
 		ctx.JSON(http.StatusCreated, urls)
 	case "file":
-		var urls []file.Event
+		var urls []storage.URLStorage
 		if err = json.Unmarshal(body, &urls); err != nil {
 			ctx.JSON(http.StatusBadRequest, errorResponse(err))
 			return
@@ -123,7 +123,7 @@ func (a *api) CreateShortURLBatch(ctx *gin.Context) {
 		}
 		defer Producer.Close()
 
-		response := make([]file.Event, 0, len(urls))
+		response := make([]storage.URLStorage, 0, len(urls))
 		for _, url := range urls {
 			if url.ShortURL == "" {
 				url.ShortURL = utils.RandString(10)
@@ -132,9 +132,17 @@ func (a *api) CreateShortURLBatch(ctx *gin.Context) {
 				url.ID = uint(rand.Int())
 			}
 			Producer.WriteEvent(&url)
-			response = append(response, file.Event{CorrelationID: url.CorrelationID, ShortURL: url.ShortURL})
+			response = append(response, storage.URLStorage{CorrelationID: url.CorrelationID, ShortURL: url.ShortURL})
+			err = a.repo.WriteShortAndOriginalURL(url.ShortURL, url.OriginalURL)
+			if err != nil {
+				ctx.JSON(http.StatusBadRequest, errorResponse(err))
+				return
+			}
+
 		}
 		ctx.JSON(http.StatusCreated, response)
+	case "memory":
+
 	}
 }
 

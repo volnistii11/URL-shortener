@@ -9,8 +9,8 @@ import (
 type InitializerReaderWriter interface {
 	CreateTableIfNotExists() error
 	ReadURL(shortURL string) (string, error)
-	WriteURL(urls *RequestSchema) (string, error)
-	WriteBatchURL(urls []RequestSchema) ([]RequestSchema, error)
+	WriteURL(urls *storage.URLStorage) (string, error)
+	WriteBatchURL(urls []storage.URLStorage) ([]storage.URLStorage, error)
 }
 
 func NewInitializerReaderWriter(repository storage.Repository, cfg config.Flags) InitializerReaderWriter {
@@ -23,13 +23,6 @@ func NewInitializerReaderWriter(repository storage.Repository, cfg config.Flags)
 type database struct {
 	repo  storage.Repository
 	flags config.Flags
-}
-
-type RequestSchema struct {
-	ID            uint   `json:"uuid,string,omitempty"`
-	CorrelationID string `json:"correlation_id,omitempty"`
-	ShortURL      string `json:"short_url,omitempty"`
-	OriginalURL   string `json:"original_url,omitempty"`
 }
 
 func (db *database) CreateTableIfNotExists() error {
@@ -60,7 +53,7 @@ func (db *database) ReadURL(shortURL string) (string, error) {
 	return originalURL, nil
 }
 
-func (db *database) WriteURL(url *RequestSchema) (string, error) {
+func (db *database) WriteURL(url *storage.URLStorage) (string, error) {
 	if err := db.repo.GetDatabase().Ping(); err != nil {
 		return "", err
 	}
@@ -76,7 +69,7 @@ func (db *database) WriteURL(url *RequestSchema) (string, error) {
 	return url.ShortURL, nil
 }
 
-func (db *database) WriteBatchURL(urls []RequestSchema) ([]RequestSchema, error) {
+func (db *database) WriteBatchURL(urls []storage.URLStorage) ([]storage.URLStorage, error) {
 	if err := db.repo.GetDatabase().Ping(); err != nil {
 		return nil, err
 	}
@@ -85,7 +78,7 @@ func (db *database) WriteBatchURL(urls []RequestSchema) ([]RequestSchema, error)
 	if err != nil {
 		return nil, err
 	}
-	response := make([]RequestSchema, 0, len(urls))
+	response := make([]storage.URLStorage, 0, len(urls))
 	for _, url := range urls {
 		if url.ShortURL == "" {
 			url.ShortURL = utils.RandString(10)
@@ -98,7 +91,7 @@ func (db *database) WriteBatchURL(urls []RequestSchema) ([]RequestSchema, error)
 			}
 			return nil, err
 		}
-		response = append(response, RequestSchema{CorrelationID: url.CorrelationID, ShortURL: url.ShortURL})
+		response = append(response, storage.URLStorage{CorrelationID: url.CorrelationID, ShortURL: url.ShortURL})
 	}
 
 	if err := tx.Commit(); err != nil {

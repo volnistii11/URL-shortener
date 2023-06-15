@@ -60,7 +60,7 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 			ctx.JSON(http.StatusBadRequest, errorResponse(err))
 			return
 		}
-		urls := database.RequestSchema{}
+		urls := storage.URLStorage{}
 		err := json.Unmarshal(body, &urls)
 		if err != nil {
 			urls.OriginalURL = string(body)
@@ -77,7 +77,7 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 			return
 		}
 		defer Producer.Close()
-		bufEvent := file.Event{}
+		bufEvent := storage.URLStorage{}
 		err = json.Unmarshal(body, &bufEvent)
 		if err != nil {
 			bufEvent.OriginalURL = string(body)
