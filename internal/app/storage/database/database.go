@@ -65,7 +65,12 @@ func (db *database) WriteURL(url *storage.URLStorage) (string, error) {
 
 	_, err := db.repo.GetDatabase().Exec("INSERT INTO url_dependencies (correlation_id, short_url, original_url) VALUES ($1, $2, $3)", url.CorrelationID, url.ShortURL, url.OriginalURL)
 	if err != nil {
-		return "", err
+		var shortURL string
+		errSelect := db.repo.GetDatabase().QueryRow("SELECT short_url FROM url_dependencies WHERE original_url = $1", url.OriginalURL).Scan(&shortURL)
+		if errSelect != nil {
+			return "", errSelect
+		}
+		return shortURL, err
 	}
 	return url.ShortURL, nil
 }

@@ -3,6 +3,8 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/volnistii11/URL-shortener/internal/app/storage/database"
 	"net/http"
 
@@ -50,9 +52,12 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 	if ctx.Request.TLS != nil {
 		scheme = "https"
 	}
+	respondingServerAddress := scheme + "://" + ctx.Request.Host + ctx.Request.RequestURI
+	if h.flags.GetRespondingServer() != "" {
+		respondingServerAddress = h.flags.GetRespondingServer() + "/"
+	}
 
 	var shortURL string
-
 	switch h.GetStorageType() {
 	case "database":
 		db := database.NewInitializerReaderWriter(h.repo, h.flags)
@@ -67,6 +72,13 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 		}
 		shortURL, err = db.WriteURL(&urls)
 		if err != nil {
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) {
+				if pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
+					ctx.String(http.StatusConflict, "%v%v", respondingServerAddress, shortURL)
+					return
+				}
+			}
 			ctx.JSON(http.StatusBadRequest, errorResponse(err))
 			return
 		}
@@ -103,11 +115,6 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 			ctx.JSON(http.StatusBadRequest, errorResponse(err))
 			return
 		}
-	}
-
-	respondingServerAddress := scheme + "://" + ctx.Request.Host + ctx.Request.RequestURI
-	if h.flags.GetRespondingServer() != "" {
-		respondingServerAddress = h.flags.GetRespondingServer() + "/"
 	}
 
 	ctx.String(http.StatusCreated, "%v%v", respondingServerAddress, shortURL)
