@@ -96,6 +96,15 @@ func (a *api) CreateShortURLBatch(ctx *gin.Context) {
 		return
 	}
 
+	scheme := "http"
+	if ctx.Request.TLS != nil {
+		scheme = "https"
+	}
+	respondingServerAddress := fmt.Sprintf("%v://%v/", scheme, ctx.Request.Host)
+	if a.flags.GetRespondingServer() != "" {
+		respondingServerAddress = fmt.Sprintf("%v/", a.flags.GetRespondingServer())
+	}
+
 	switch a.GetStorageType() {
 	case "database":
 		db := database.NewInitializerReaderWriter(a.repo, a.flags)
@@ -104,7 +113,7 @@ func (a *api) CreateShortURLBatch(ctx *gin.Context) {
 			return
 		}
 
-		urls, err = db.WriteBatchURL(urls)
+		urls, err = db.WriteBatchURL(urls, respondingServerAddress)
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, errorResponse(err))
 			return
@@ -121,7 +130,7 @@ func (a *api) CreateShortURLBatch(ctx *gin.Context) {
 		response := make([]storage.URLStorage, 0, len(urls))
 		for _, url := range urls {
 			if url.ShortURL == "" {
-				url.ShortURL = utils.RandString(10)
+				url.ShortURL = fmt.Sprintf("%v%v", respondingServerAddress, utils.RandString(10))
 			}
 			if url.ID == 0 {
 				url.ID = uint(rand.Int())
@@ -139,7 +148,7 @@ func (a *api) CreateShortURLBatch(ctx *gin.Context) {
 		response := make([]storage.URLStorage, 0, len(urls))
 		for _, url := range urls {
 			if url.ShortURL == "" {
-				url.ShortURL = utils.RandString(10)
+				url.ShortURL = fmt.Sprintf("%v%v", respondingServerAddress, utils.RandString(10))
 			}
 			err = a.repo.WriteShortAndOriginalURL(url.ShortURL, url.OriginalURL)
 			if err != nil {

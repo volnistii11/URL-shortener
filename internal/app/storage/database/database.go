@@ -1,6 +1,7 @@
 package database
 
 import (
+	"fmt"
 	"github.com/volnistii11/URL-shortener/internal/app/config"
 	"github.com/volnistii11/URL-shortener/internal/app/storage"
 	"github.com/volnistii11/URL-shortener/internal/app/utils"
@@ -10,7 +11,7 @@ type InitializerReaderWriter interface {
 	CreateTableIfNotExists() error
 	ReadURL(shortURL string) (string, error)
 	WriteURL(urls *storage.URLStorage) (string, error)
-	WriteBatchURL(urls []storage.URLStorage) ([]storage.URLStorage, error)
+	WriteBatchURL(urls []storage.URLStorage, serverAddress string) ([]storage.URLStorage, error)
 }
 
 func NewInitializerReaderWriter(repository storage.Repository, cfg config.Flags) InitializerReaderWriter {
@@ -69,7 +70,7 @@ func (db *database) WriteURL(url *storage.URLStorage) (string, error) {
 	return url.ShortURL, nil
 }
 
-func (db *database) WriteBatchURL(urls []storage.URLStorage) ([]storage.URLStorage, error) {
+func (db *database) WriteBatchURL(urls []storage.URLStorage, serverAddress string) ([]storage.URLStorage, error) {
 	if err := db.repo.GetDatabase().Ping(); err != nil {
 		return nil, err
 	}
@@ -83,15 +84,18 @@ func (db *database) WriteBatchURL(urls []storage.URLStorage) ([]storage.URLStora
 		if url.ShortURL == "" {
 			url.ShortURL = utils.RandString(10)
 		}
+
+		shortURL := fmt.Sprintf("%v%v", serverAddress, url.ShortURL)
+
 		_, err := tx.Exec("INSERT INTO url_dependencies (correlation_id, short_url, original_url) VALUES ($1, $2, $3)",
-			url.CorrelationID, url.ShortURL, url.OriginalURL)
+			url.CorrelationID, shortURL, url.OriginalURL)
 		if err != nil {
 			if err := tx.Rollback(); err != nil {
 				return nil, err
 			}
 			return nil, err
 		}
-		response = append(response, storage.URLStorage{CorrelationID: url.CorrelationID, ShortURL: url.ShortURL})
+		response = append(response, storage.URLStorage{CorrelationID: url.CorrelationID, ShortURL: shortURL})
 	}
 
 	if err := tx.Commit(); err != nil {
