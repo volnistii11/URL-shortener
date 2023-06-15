@@ -71,7 +71,6 @@ func (a *api) CreateShortURL(ctx *gin.Context) {
 	}
 
 	var shortURL string
-
 	switch a.GetStorageType() {
 	case "database":
 		db := database.NewInitializerReaderWriter(a.repo, a.flags)
@@ -79,13 +78,15 @@ func (a *api) CreateShortURL(ctx *gin.Context) {
 			ctx.JSON(http.StatusBadRequest, errorResponse(err))
 			return
 		}
-
 		shortURL, err = db.WriteURL(&storage.URLStorage{OriginalURL: bufRequest.URL})
 		if err != nil {
 			var pgErr *pgconn.PgError
 			if errors.As(err, &pgErr) {
 				if pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
-					ctx.String(http.StatusConflict, "%v%v", respondingServerAddress, shortURL)
+					buffResponse := response{
+						Result: fmt.Sprintf("%v%v", respondingServerAddress, shortURL),
+					}
+					ctx.JSON(http.StatusConflict, buffResponse)
 					return
 				}
 			}
