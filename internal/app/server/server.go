@@ -37,7 +37,9 @@ func (srv *server) Router(repository storage.Repository, cfg config.Flags) *gin.
 	srv.httpServer.Use(m.GZIPHandler())
 	srv.httpServer.POST("/", h.CreateShortURL)
 	srv.httpServer.GET("/:short_url", h.GetFullURL)
-	srv.httpServer.POST("/api/shorten", a.CreateShortURL)
 	srv.httpServer.GET("/ping", h.PingDatabaseServer)
+
+	srv.httpServer.POST("/api/shorten", a.CreateShortURL)
+	srv.httpServer.POST("/api/shorten/batch", a.CreateShortURLBatch)
 	return srv.httpServer
 }
