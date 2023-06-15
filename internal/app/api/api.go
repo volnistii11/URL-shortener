@@ -90,32 +90,27 @@ func (a *api) CreateShortURLBatch(ctx *gin.Context) {
 		return
 	}
 
+	var urls []storage.URLStorage
+	if err = json.Unmarshal(body, &urls); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
 	switch a.GetStorageType() {
 	case "database":
-		var urls []storage.URLStorage
-		if err = json.Unmarshal(body, &urls); err != nil {
-			ctx.JSON(http.StatusBadRequest, errorResponse(err))
-			return
-		}
-
 		db := database.NewInitializerReaderWriter(a.repo, a.flags)
 		if err := db.CreateTableIfNotExists(); err != nil {
 			ctx.JSON(http.StatusBadRequest, errorResponse(err))
 			return
 		}
 
-		urls, err := db.WriteBatchURL(urls)
+		urls, err = db.WriteBatchURL(urls)
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, errorResponse(err))
 			return
 		}
 		ctx.JSON(http.StatusCreated, urls)
 	case "file":
-		var urls []storage.URLStorage
-		if err = json.Unmarshal(body, &urls); err != nil {
-			ctx.JSON(http.StatusBadRequest, errorResponse(err))
-			return
-		}
 		Producer, err := file.NewProducer(a.flags.GetFileStoragePath())
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, errorResponse(err))
@@ -138,11 +133,22 @@ func (a *api) CreateShortURLBatch(ctx *gin.Context) {
 				ctx.JSON(http.StatusBadRequest, errorResponse(err))
 				return
 			}
-
 		}
 		ctx.JSON(http.StatusCreated, response)
 	case "memory":
-
+		response := make([]storage.URLStorage, 0, len(urls))
+		for _, url := range urls {
+			if url.ShortURL == "" {
+				url.ShortURL = utils.RandString(10)
+			}
+			err = a.repo.WriteShortAndOriginalURL(url.ShortURL, url.OriginalURL)
+			if err != nil {
+				ctx.JSON(http.StatusBadRequest, errorResponse(err))
+				return
+			}
+			response = append(response, storage.URLStorage{CorrelationID: url.CorrelationID, ShortURL: url.ShortURL})
+		}
+		ctx.JSON(http.StatusCreated, response)
 	}
 }
 
