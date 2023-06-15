@@ -11,9 +11,10 @@ import (
 )
 
 type Event struct {
-	ID          uint   `json:"uuid,string"`
-	ShortURL    string `json:"short_url"`
-	OriginalURL string `json:"original_url"`
+	ID            uint   `json:"uuid,string,omitempty"`
+	CorrelationID string `json:"correlation_id,omitempty"`
+	ShortURL      string `json:"short_url,omitempty"`
+	OriginalURL   string `json:"original_url,omitempty"`
 }
 
 type Producer struct {
