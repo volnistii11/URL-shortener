@@ -113,6 +113,7 @@ func (a *api) CreateShortURLBatch(ctx *gin.Context) {
 			ctx.JSON(http.StatusBadRequest, errorResponse(err))
 			return
 		}
+		fmt.Println(urls)
 
 		urls, err = db.WriteBatchURL(urls, respondingServerAddress)
 		if err != nil {
