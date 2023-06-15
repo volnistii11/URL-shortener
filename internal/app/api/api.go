@@ -107,13 +107,11 @@ func (a *api) CreateShortURLBatch(ctx *gin.Context) {
 
 	switch a.GetStorageType() {
 	case "database":
-		fmt.Println("database")
 		db := database.NewInitializerReaderWriter(a.repo, a.flags)
 		if err := db.CreateTableIfNotExists(); err != nil {
 			ctx.JSON(http.StatusBadRequest, errorResponse(err))
 			return
 		}
-		fmt.Println(urls)
 
 		urls, err = db.WriteBatchURL(urls, respondingServerAddress)
 		if err != nil {
@@ -122,7 +120,6 @@ func (a *api) CreateShortURLBatch(ctx *gin.Context) {
 		}
 		ctx.JSON(http.StatusCreated, urls)
 	case "file":
-		fmt.Println("file")
 		Producer, err := file.NewProducer(a.flags.GetFileStoragePath())
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, errorResponse(err))
@@ -133,33 +130,34 @@ func (a *api) CreateShortURLBatch(ctx *gin.Context) {
 		response := make([]storage.URLStorage, 0, len(urls))
 		for _, url := range urls {
 			if url.ShortURL == "" {
-				url.ShortURL = fmt.Sprintf("%v%v", respondingServerAddress, utils.RandString(10))
+				url.ShortURL = utils.RandString(10)
 			}
 			if url.ID == 0 {
 				url.ID = uint(rand.Int())
 			}
 			Producer.WriteEvent(&url)
-			response = append(response, storage.URLStorage{CorrelationID: url.CorrelationID, ShortURL: url.ShortURL})
 			err = a.repo.WriteShortAndOriginalURL(url.ShortURL, url.OriginalURL)
 			if err != nil {
 				ctx.JSON(http.StatusBadRequest, errorResponse(err))
 				return
 			}
+			shortURL := fmt.Sprintf("%v%v", respondingServerAddress, url.ShortURL)
+			response = append(response, storage.URLStorage{CorrelationID: url.CorrelationID, ShortURL: shortURL})
 		}
 		ctx.JSON(http.StatusCreated, response)
 	case "memory":
-		fmt.Println("memory")
 		response := make([]storage.URLStorage, 0, len(urls))
 		for _, url := range urls {
 			if url.ShortURL == "" {
-				url.ShortURL = fmt.Sprintf("%v%v", respondingServerAddress, utils.RandString(10))
+				url.ShortURL = utils.RandString(10)
 			}
 			err = a.repo.WriteShortAndOriginalURL(url.ShortURL, url.OriginalURL)
 			if err != nil {
 				ctx.JSON(http.StatusBadRequest, errorResponse(err))
 				return
 			}
-			response = append(response, storage.URLStorage{CorrelationID: url.CorrelationID, ShortURL: url.ShortURL})
+			shortURL := fmt.Sprintf("%v%v", respondingServerAddress, url.ShortURL)
+			response = append(response, storage.URLStorage{CorrelationID: url.CorrelationID, ShortURL: shortURL})
 		}
 		ctx.JSON(http.StatusCreated, response)
 	}

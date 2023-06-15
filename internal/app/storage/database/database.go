@@ -85,16 +85,15 @@ func (db *database) WriteBatchURL(urls []storage.URLStorage, serverAddress strin
 			url.ShortURL = utils.RandString(10)
 		}
 
-		shortURL := fmt.Sprintf("%v%v", serverAddress, url.ShortURL)
-
 		_, err := tx.Exec("INSERT INTO url_dependencies (correlation_id, short_url, original_url) VALUES ($1, $2, $3)",
-			url.CorrelationID, shortURL, url.OriginalURL)
+			url.CorrelationID, url.ShortURL, url.OriginalURL)
 		if err != nil {
 			if err := tx.Rollback(); err != nil {
 				return nil, err
 			}
 			return nil, err
 		}
+		shortURL := fmt.Sprintf("%v%v", serverAddress, url.ShortURL)
 		response = append(response, storage.URLStorage{CorrelationID: url.CorrelationID, ShortURL: shortURL})
 	}
 
