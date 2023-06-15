@@ -89,6 +89,11 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 			bufEvent.ShortURL = shortURL
 		} else {
 			shortURL = bufEvent.ShortURL
+			err = h.repo.WriteShortAndOriginalURL(bufEvent.ShortURL, bufEvent.OriginalURL)
+			if err != nil {
+				ctx.JSON(http.StatusBadRequest, errorResponse(err))
+				return
+			}
 		}
 		Producer.WriteEvent(&bufEvent)
 	case "memory":

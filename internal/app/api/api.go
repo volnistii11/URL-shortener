@@ -5,6 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/volnistii11/URL-shortener/internal/app/storage/database"
+	"github.com/volnistii11/URL-shortener/internal/app/storage/file"
+	"github.com/volnistii11/URL-shortener/internal/app/utils"
+	"math/rand"
 	"net/http"
 
 	"github.com/volnistii11/URL-shortener/internal/app/config"
@@ -87,14 +90,14 @@ func (a *api) CreateShortURLBatch(ctx *gin.Context) {
 		return
 	}
 
-	var urls []database.RequestSchema
-	if err = json.Unmarshal(body, &urls); err != nil {
-		ctx.JSON(http.StatusBadRequest, errorResponse(err))
-		return
-	}
-
 	switch a.GetStorageType() {
 	case "database":
+		var urls []database.RequestSchema
+		if err = json.Unmarshal(body, &urls); err != nil {
+			ctx.JSON(http.StatusBadRequest, errorResponse(err))
+			return
+		}
+
 		db := database.NewInitializerReaderWriter(a.repo, a.flags)
 		if err := db.CreateTableIfNotExists(); err != nil {
 			ctx.JSON(http.StatusBadRequest, errorResponse(err))
@@ -108,7 +111,30 @@ func (a *api) CreateShortURLBatch(ctx *gin.Context) {
 		}
 		ctx.JSON(http.StatusCreated, urls)
 	case "file":
+		var urls []file.Event
+		if err = json.Unmarshal(body, &urls); err != nil {
+			ctx.JSON(http.StatusBadRequest, errorResponse(err))
+			return
+		}
+		Producer, err := file.NewProducer(a.flags.GetFileStoragePath())
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, errorResponse(err))
+			return
+		}
+		defer Producer.Close()
 
+		response := make([]file.Event, 0, len(urls))
+		for _, url := range urls {
+			if url.ShortURL == "" {
+				url.ShortURL = utils.RandString(10)
+			}
+			if url.ID == 0 {
+				url.ID = uint(rand.Int())
+			}
+			Producer.WriteEvent(&url)
+			response = append(response, file.Event{CorrelationID: url.CorrelationID, ShortURL: url.ShortURL})
+		}
+		ctx.JSON(http.StatusCreated, response)
 	}
 }
 
