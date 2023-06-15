@@ -107,6 +107,7 @@ func (a *api) CreateShortURLBatch(ctx *gin.Context) {
 
 	switch a.GetStorageType() {
 	case "database":
+		fmt.Println("database")
 		db := database.NewInitializerReaderWriter(a.repo, a.flags)
 		if err := db.CreateTableIfNotExists(); err != nil {
 			ctx.JSON(http.StatusBadRequest, errorResponse(err))
@@ -120,6 +121,7 @@ func (a *api) CreateShortURLBatch(ctx *gin.Context) {
 		}
 		ctx.JSON(http.StatusCreated, urls)
 	case "file":
+		fmt.Println("file")
 		Producer, err := file.NewProducer(a.flags.GetFileStoragePath())
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, errorResponse(err))
@@ -145,6 +147,7 @@ func (a *api) CreateShortURLBatch(ctx *gin.Context) {
 		}
 		ctx.JSON(http.StatusCreated, response)
 	case "memory":
+		fmt.Println("memory")
 		response := make([]storage.URLStorage, 0, len(urls))
 		for _, url := range urls {
 			if url.ShortURL == "" {
