@@ -18,7 +18,7 @@ func main() {
 	cfg := config.NewFlags()
 	cfg.ParseFlags()
 
-	//example: "postgres://postgres:74728@localhost:5432/postgres"
+	//example: "postgres://postgres:74728@localhost:5432/db"
 	db, err := database.NewConnection("pgx", cfg.GetDatabaseDSN())
 	if err != nil {
 		log.Printf("Error : %v\n", err)

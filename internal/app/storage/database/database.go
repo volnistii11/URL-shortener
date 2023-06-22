@@ -2,9 +2,13 @@ package database
 
 import (
 	"fmt"
+
 	"github.com/volnistii11/URL-shortener/internal/app/config"
 	"github.com/volnistii11/URL-shortener/internal/app/storage"
 	"github.com/volnistii11/URL-shortener/internal/app/utils"
+
+	"github.com/Masterminds/squirrel"
+	"github.com/pkg/errors"
 )
 
 type InitializerReaderWriter interface {
@@ -41,12 +45,19 @@ func (db *database) CreateTableIfNotExists() error {
 }
 
 func (db *database) ReadURL(shortURL string) (string, error) {
-	if err := db.repo.GetDatabase().Ping(); err != nil {
+	dbConnection := db.repo.GetDatabase();
+	if err := dbConnection.Ping(); err != nil {
 		return "", err
 	}
 
+	sb := squirrel.Select("original_url").
+		From("url_dependencies").
+		Where(squirrel.Eq{"short_url": shortURL}).
+		PlaceholderFormat(squirrel.Dollar).
+		RunWith(dbConnection)
+
 	var originalURL string
-	err := db.repo.GetDatabase().QueryRow("SELECT original_url FROM url_dependencies WHERE short_url = $1", shortURL).Scan(&originalURL)
+	err := sb.QueryRow().Scan(&originalURL)
 	if err != nil {
 		return "", err
 	}
@@ -55,7 +66,9 @@ func (db *database) ReadURL(shortURL string) (string, error) {
 }
 
 func (db *database) WriteURL(url *storage.URLStorage) (string, error) {
-	if err := db.repo.GetDatabase().Ping(); err != nil {
+	dbConnection := db.repo.GetDatabase()
+
+	if err := dbConnection.Ping(); err != nil {
 		return "", err
 	}
 
@@ -63,19 +76,39 @@ func (db *database) WriteURL(url *storage.URLStorage) (string, error) {
 		url.ShortURL = utils.RandString(10)
 	}
 
-	_, err := db.repo.GetDatabase().Exec("INSERT INTO url_dependencies (correlation_id, short_url, original_url) VALUES ($1, $2, $3)", url.CorrelationID, url.ShortURL, url.OriginalURL)
+	sb := squirrel.StatementBuilder.
+		Insert("url_dependencies").
+		Columns("correlation_id", "short_url", "original_url").
+		PlaceholderFormat(squirrel.Dollar).
+		RunWith(dbConnection)
+
+	sb = sb.Values(
+		url.CorrelationID,
+		url.ShortURL,
+		url.OriginalURL,
+	)
+
+	_, err := sb.Exec()
 	if err != nil {
 		var shortURL string
-		errSelect := db.repo.GetDatabase().QueryRow("SELECT short_url FROM url_dependencies WHERE original_url = $1", url.OriginalURL).Scan(&shortURL)
+		sb := squirrel.Select("short_url").
+			From("url_dependencies").
+			Where(squirrel.Eq{"original_url": url.OriginalURL}).
+			PlaceholderFormat(squirrel.Dollar).
+			RunWith(dbConnection)
+
+		errSelect := sb.QueryRow().Scan(&shortURL)
 		if errSelect != nil {
-			return "", errSelect
+			return "", errors.Wrap(errSelect, "Select")
 		}
 		return shortURL, err
 	}
+
 	return url.ShortURL, nil
 }
 
 func (db *database) WriteBatchURL(urls []storage.URLStorage, serverAddress string) ([]storage.URLStorage, error) {
+
 	if err := db.repo.GetDatabase().Ping(); err != nil {
 		return nil, err
 	}
@@ -84,26 +117,39 @@ func (db *database) WriteBatchURL(urls []storage.URLStorage, serverAddress strin
 	if err != nil {
 		return nil, err
 	}
+
 	response := make([]storage.URLStorage, 0, len(urls))
+
+	sb := squirrel.StatementBuilder.
+		Insert("url_dependencies").
+		Columns("correlation_id", "short_url", "original_url").
+		PlaceholderFormat(squirrel.Dollar).
+		RunWith(tx)
+
 	for _, url := range urls {
 		if url.ShortURL == "" {
 			url.ShortURL = utils.RandString(10)
 		}
 
-		_, err := tx.Exec("INSERT INTO url_dependencies (correlation_id, short_url, original_url) VALUES ($1, $2, $3)",
-			url.CorrelationID, url.ShortURL, url.OriginalURL)
-		if err != nil {
-			if err := tx.Rollback(); err != nil {
-				return nil, err
-			}
-			return nil, err
-		}
+		sb = sb.Values(
+			url.CorrelationID,
+			url.ShortURL,
+			url.OriginalURL,
+		)
+
 		shortURL := fmt.Sprintf("%v%v", serverAddress, url.ShortURL)
 		response = append(response, storage.URLStorage{CorrelationID: url.CorrelationID, ShortURL: shortURL})
 	}
 
+	_, err = sb.Exec()
+	if err != nil {
+		if err := tx.Rollback(); err != nil {
+			return nil, errors.Wrap(err, "Rollback")
+		}
+	}
+
 	if err := tx.Commit(); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Commit")
 	}
 
 	return response, nil
