@@ -8,6 +8,9 @@ import (
 	"github.com/volnistii11/URL-shortener/internal/app/utils"
 
 	"github.com/Masterminds/squirrel"
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/pkg/errors"
 )
 
@@ -35,6 +38,10 @@ func (db *database) CreateTableIfNotExists() error {
 		return err
 	}
 
+	//if err := runMigrations(db.flags.GetDatabaseDSN()); err != nil {
+	//	return errors.Wrap(err, "Start migrations")
+	//}
+
 	_, err := db.repo.GetDatabase().
 		Exec("CREATE TABLE IF NOT EXISTS url_dependencies (id serial primary key, correlation_id varchar(255) null, short_url varchar(255) not null unique, original_url varchar(255) not null unique)")
 	if err != nil {
@@ -45,7 +52,7 @@ func (db *database) CreateTableIfNotExists() error {
 }
 
 func (db *database) ReadURL(shortURL string) (string, error) {
-	dbConnection := db.repo.GetDatabase();
+	dbConnection := db.repo.GetDatabase()
 	if err := dbConnection.Ping(); err != nil {
 		return "", err
 	}
@@ -153,4 +160,19 @@ func (db *database) WriteBatchURL(urls []storage.URLStorage, serverAddress strin
 	}
 
 	return response, nil
+}
+
+func runMigrations(dsn string) error {
+	const migrationsPath = "../../internal/app/storage/database/migrations"
+
+	m, err := migrate.New(fmt.Sprintf("file://%s", migrationsPath), dsn)
+	if err != nil {
+		return errors.Wrap(err, "Create migrations")
+	}
+	if err := m.Up(); err != nil {
+		if errors.Is(err, migrate.ErrNoChange) {
+			return errors.Wrap(err, "Run migrations")
+		}
+	}
+	return nil
 }
