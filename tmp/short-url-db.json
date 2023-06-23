@@ -3,3 +3,33 @@
 {"uuid":"0","short_url":"INTfqRBMfF","original_url":"http://yandex.ru"}
 {"uuid":"3","short_url":"dG56Hqxm","original_url":"http://practicum.yandex.ru"}
 {"uuid":"3","short_url":"dG56Hqxm","original_url":"http://practicum.yandex.ru"}
+{"uuid":"0","short_url":"VPnpsPXSnQ","original_url":"https://go.dev/tour/welcome/2"}
+{"correlation_id":"asdasd","original_url":"https://go.dev/blog/slices-intro"}
+{"correlation_id":"asdz","original_url":"https://github.com/sau00/uber-go-guide-ru/blob/master/style.md"}
+{"correlation_id":"asdasd","short_url":"QcIoEvtzUF","original_url":"https://go.dev/blog/slices-intro"}
+{"correlation_id":"asdz","short_url":"qkyqUqOMYI","original_url":"https://github.com/sau00/uber-go-guide-ru/blob/master/style.md"}
+{"uuid":"999","correlation_id":"asdasd","short_url":"gPdakYKROh","original_url":"https://go.dev/blog/slices-intro"}
+{"uuid":"999","correlation_id":"asdz","short_url":"ThhSjimoQT","original_url":"https://github.com/sau00/uber-go-guide-ru/blob/master/style.md"}
+{"uuid":"1969747455193022050","correlation_id":"asdasd","short_url":"PcEgMbXzoz","original_url":"https://go.dev/blog/slices-intro"}
+{"uuid":"1186467803271801270","correlation_id":"asdz","short_url":"AuUfbbIviw","original_url":"https://github.com/sau00/uber-go-guide-ru/blob/master/style.md"}
+{"uuid":"7383158112123912067","correlation_id":"asdasd","short_url":"GVwfOhSlCN","original_url":"https://go.dev/blog/slices-intro"}
+{"uuid":"6304193618908272083","correlation_id":"asdz","short_url":"aisPNAiASi","original_url":"https://github.com/sau00/uber-go-guide-ru/blob/master/style.md"}
+{"uuid":"2990151977122887390","correlation_id":"asdasd","short_url":"MtRBYsHXwq","original_url":"https://go.dev/blog/slices-intro"}
+{"uuid":"8550208183611436175","correlation_id":"asdz","short_url":"NgwnIWocTs","original_url":"https://github.com/sau00/uber-go-guide-ru/blob/master/style.md"}
+{"short_url":"IAZrxgBRkj","original_url":"https://go.dev/blog/slices-intro"}
+{"short_url":"nnJoWVSwIP","original_url":"https://go.dev/blog/slices-intro"}
+{"short_url":"BRuOLsHkJG","original_url":"[\r\n    {\r\n        \"correlation_id\": \"asdasd\",\r\n        \"original_url\": \"https://go.dev/blog/slices-intro\"\r\n    },\r\n    {\r\n        \"correlation_id\": \"asdz\",\r\n        \"original_url\": \"https://github.com/sau00/uber-go-guide-ru/blob/master/style.md\"\r\n    }\r\n] "}
+{"short_url":"eWzNxWxWjR","original_url":"[\r\n    {\r\n        \"correlation_id\": \"asdasd\",\r\n        \"original_url\": \"https://go.dev/blog/slices-intro\"\r\n    },\r\n    {\r\n        \"correlation_id\": \"asdz\",\r\n        \"original_url\": \"https://github.com/sau00/uber-go-guide-ru/blob/master/style.md\"\r\n    }\r\n] "}
+{"correlation_id":"asdasd","original_url":"https://go.dev/blog/slices-intro"}
+{"correlation_id":"asdasd","original_url":"https://go.dev/blog/slices-intro"}
+{"correlation_id":"asdasd","original_url":"https://go.dev/blog/slices-intro"}
+{"correlation_id":"asdasd","short_url":"SDADS12","original_url":"https://go.dev/blog/slices-intro"}
+{"short_url":"QbgETpeoJL","original_url":"https://go.dev/blog/slices-intro"}
+{"uuid":"8700763081334433611","correlation_id":"asdasddsa","short_url":"sSuCRtUeAn","original_url":"https://go.dev/blog/slices-intro1"}
+{"uuid":"6558328395834681354","correlation_id":"asdzads","short_url":"cZmqCegYzM","original_url":"https://github.com/sau00/uber-go-guide-ru/blob/master/style1.md"}
+{"uuid":"250944691515802761","correlation_id":"asdasddsa","short_url":"wqqhZrejxj","original_url":"https://go.dev/blog/slices-intro1"}
+{"uuid":"411537981076659492","correlation_id":"asdzads","short_url":"VQkPxCEUXd","original_url":"https://github.com/sau00/uber-go-guide-ru/blob/master/style1.md"}
+{"uuid":"5394883224479658178","correlation_id":"asdasddsa","short_url":"fuJchMxVhe","original_url":"https://go.dev/blog/slices-intro"}
+{"uuid":"1941642324135833495","correlation_id":"asdzads","short_url":"NvmmhWJhpu","original_url":"https://github.com/sau00/uber-go-guide-ru/blob/master/style.md"}
+{"uuid":"7498077466852103141","correlation_id":"asdasddsa","short_url":"http://localhost:8080/DKFjBtWxLT","original_url":"https://go.dev/blog/slices-intro"}
+{"uuid":"4552922926222630480","correlation_id":"asdzads","short_url":"http://localhost:8080/MPNSRQQPjG","original_url":"https://github.com/sau00/uber-go-guide-ru/blob/master/style.md"}

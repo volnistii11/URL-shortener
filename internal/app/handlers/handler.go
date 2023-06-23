@@ -3,6 +3,9 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/volnistii11/URL-shortener/internal/app/storage/database"
 	"net/http"
 
 	"github.com/volnistii11/URL-shortener/internal/app/config"
@@ -15,6 +18,8 @@ import (
 type HandlerProvider interface {
 	CreateShortURL(ctx *gin.Context)
 	GetFullURL(ctx *gin.Context)
+	PingDatabaseServer(ctx *gin.Context)
+	GetStorageType() string
 }
 
 func NewHandlerProvider(repository storage.Repository, cfg config.Flags) HandlerProvider {
@@ -47,23 +52,44 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 	if ctx.Request.TLS != nil {
 		scheme = "https"
 	}
+	respondingServerAddress := scheme + "://" + ctx.Request.Host + ctx.Request.RequestURI
+	if h.flags.GetRespondingServer() != "" {
+		respondingServerAddress = h.flags.GetRespondingServer() + "/"
+	}
 
 	var shortURL string
-	if h.flags.GetFileStoragePath() == "" {
-		originalURL := string(body)
-		shortURL, err = h.repo.WriteURL(originalURL)
-		if err != nil {
+	switch h.GetStorageType() {
+	case "database":
+		db := database.NewInitializerReaderWriter(h.repo, h.flags)
+		if err := db.CreateTableIfNotExists(); err != nil {
 			ctx.JSON(http.StatusBadRequest, errorResponse(err))
 			return
 		}
-	} else {
+		urls := storage.URLStorage{}
+		err := json.Unmarshal(body, &urls)
+		if err != nil {
+			urls.OriginalURL = string(body)
+		}
+		shortURL, err = db.WriteURL(&urls)
+		if err != nil {
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) {
+				if pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
+					ctx.String(http.StatusConflict, "%v%v", respondingServerAddress, shortURL)
+					return
+				}
+			}
+			ctx.JSON(http.StatusBadRequest, errorResponse(err))
+			return
+		}
+	case "file":
 		Producer, err := file.NewProducer(h.flags.GetFileStoragePath())
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, errorResponse(err))
 			return
 		}
 		defer Producer.Close()
-		bufEvent := file.Event{}
+		bufEvent := storage.URLStorage{}
 		err = json.Unmarshal(body, &bufEvent)
 		if err != nil {
 			bufEvent.OriginalURL = string(body)
@@ -75,22 +101,38 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 			bufEvent.ShortURL = shortURL
 		} else {
 			shortURL = bufEvent.ShortURL
+			err = h.repo.WriteShortAndOriginalURL(bufEvent.ShortURL, bufEvent.OriginalURL)
+			if err != nil {
+				ctx.JSON(http.StatusBadRequest, errorResponse(err))
+				return
+			}
 		}
 		Producer.WriteEvent(&bufEvent)
-	}
-
-	respondingServerAddress := scheme + "://" + ctx.Request.Host + ctx.Request.RequestURI
-	if h.flags.GetRespondingServer() != "" {
-		respondingServerAddress = h.flags.GetRespondingServer() + "/"
+	case "memory":
+		originalURL := string(body)
+		shortURL, err = h.repo.WriteURL(originalURL)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, errorResponse(err))
+			return
+		}
 	}
 
 	ctx.String(http.StatusCreated, "%v%v", respondingServerAddress, shortURL)
 }
 
 func (h *handlerURL) GetFullURL(ctx *gin.Context) {
+
+	var fullURL string
+	var err error
 	shortURL := ctx.Params.ByName("short_url")
 
-	fullURL, err := h.repo.ReadURL(shortURL)
+	switch h.GetStorageType() {
+	case "database":
+		db := database.NewInitializerReaderWriter(h.repo, h.flags)
+		fullURL, err = db.ReadURL(shortURL)
+	default:
+		fullURL, err = h.repo.ReadURL(shortURL)
+	}
 
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
@@ -98,6 +140,24 @@ func (h *handlerURL) GetFullURL(ctx *gin.Context) {
 	}
 	ctx.Header("Location", fullURL)
 	ctx.Status(http.StatusTemporaryRedirect)
+}
+
+func (h *handlerURL) PingDatabaseServer(ctx *gin.Context) {
+	if err := h.repo.GetDatabase().Ping(); err != nil {
+		ctx.Status(http.StatusBadRequest)
+		return
+	}
+	ctx.Status(http.StatusOK)
+}
+
+func (h *handlerURL) GetStorageType() string {
+	if h.flags.GetDatabaseDSN() != "" {
+		return "database"
+	} else if h.flags.GetFileStoragePath() != "" {
+		return "file"
+	} else {
+		return "memory"
+	}
 }
 
 func errorResponse(err error) gin.H {

@@ -61,7 +61,7 @@ func TestCreateShortURL(t *testing.T) {
 			var buf bytes.Buffer
 			_ = json.NewEncoder(&buf).Encode(tt.url)
 
-			repo := storage.NewRepository()
+			repo := storage.NewRepository(nil)
 			flags := config.NewFlags()
 			api := NewAPIServiceServer(repo, flags)
 

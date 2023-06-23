@@ -6,16 +6,27 @@ import (
 	"github.com/volnistii11/URL-shortener/internal/app/config"
 	"github.com/volnistii11/URL-shortener/internal/app/server"
 	"github.com/volnistii11/URL-shortener/internal/app/storage"
+	"github.com/volnistii11/URL-shortener/internal/app/storage/database"
 	"github.com/volnistii11/URL-shortener/internal/app/storage/file"
 	"github.com/volnistii11/URL-shortener/internal/telemetry"
 
 	"github.com/gin-gonic/gin"
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 func main() {
-	repo := storage.NewRepository()
 	cfg := config.NewFlags()
 	cfg.ParseFlags()
+
+	//example: "postgres://postgres:74728@localhost:5432/db"
+	db, err := database.NewConnection("pgx", cfg.GetDatabaseDSN())
+	if err != nil {
+		log.Printf("Error : %v\n", err)
+	}
+	defer db.Close()
+
+	repo := storage.NewRepository(db)
+
 	logger, err := telemetry.NewLogger()
 	if err != nil {
 		log.Printf("Error : %v\n", err)
