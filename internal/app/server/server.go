@@ -35,6 +35,7 @@ func (srv *server) Router(repository storage.Repository, cfg config.Flags) *gin.
 	srv.httpServer.Use(gin.Recovery())
 	srv.httpServer.Use(m.LogHTTPHandler())
 	srv.httpServer.Use(m.GZIPHandler())
+	srv.httpServer.Use(m.Auth())
 	srv.httpServer.POST("/", h.CreateShortURL)
 	srv.httpServer.GET("/:short_url", h.GetFullURL)
 	srv.httpServer.GET("/ping", h.PingDatabaseServer)

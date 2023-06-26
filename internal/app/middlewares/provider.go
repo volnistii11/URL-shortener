@@ -4,6 +4,8 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
+	"math/rand"
+	"net/http"
 	"strings"
 	"time"
 
@@ -14,6 +16,7 @@ import (
 type MiddlewareProvider interface {
 	LogHTTPHandler() gin.HandlerFunc
 	GZIPHandler() gin.HandlerFunc
+	Auth() gin.HandlerFunc
 }
 
 func NewMiddlewareProvider(logger *zap.Logger) MiddlewareProvider {
@@ -87,6 +90,26 @@ func (m *middleware) GZIPHandler() gin.HandlerFunc {
 		ctx.Writer = &gzipWriter{
 			ResponseWriter: ctx.Writer,
 			Writer:         gzResponse,
+		}
+
+		ctx.Next()
+	}
+}
+
+func (m *middleware) Auth() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		cookie, err := ctx.Cookie("cookie_auth")
+		if err != nil {
+			tokenString, _ := BuildJWTString(rand.Intn(1000))
+			ctx.SetCookie("cookie_auth", tokenString, 3600, "/", "localhost", false, false)
+			ctx.Next()
+			return
+		}
+
+		userID := GetUserID(cookie)
+		if userID == -1 {
+			ctx.AbortWithStatus(http.StatusUnauthorized)
+			return
 		}
 
 		ctx.Next()
