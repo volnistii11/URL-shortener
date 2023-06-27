@@ -68,8 +68,7 @@ func (a *api) CreateShortURL(ctx *gin.Context) {
 
 	userID, ok := ctx.Get("user_id")
 	if !ok {
-		ctx.JSON(http.StatusNoContent, "user_id is empty")
-		return
+		userID = nil
 	}
 
 	bufRequest := request{}
@@ -148,8 +147,7 @@ func (a *api) CreateShortURLBatch(ctx *gin.Context) {
 
 	userID, ok := ctx.Get("user_id")
 	if !ok {
-		ctx.JSON(http.StatusNoContent, "user_id is empty")
-		return
+		userID = nil
 	}
 	for i := range urls {
 		urls[i].UserID = userID.(int)
