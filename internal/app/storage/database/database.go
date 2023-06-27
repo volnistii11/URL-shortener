@@ -20,6 +20,7 @@ type InitializerReaderWriter interface {
 	ReadURL(shortURL string) (string, error)
 	WriteURL(urls *model.URL) (string, error)
 	WriteBatchURL(urls []model.URL, serverAddress string) ([]model.URL, error)
+	ReadBatchURLByUserId(userId int) ([]model.URL, error)
 }
 
 func NewInitializerReaderWriter(repository storage.Repository, cfg config.Flags) InitializerReaderWriter {
@@ -44,7 +45,7 @@ func (db *database) CreateTableIfNotExists() error {
 	//}
 
 	_, err := db.repo.GetDatabase().
-		Exec("CREATE TABLE IF NOT EXISTS url_dependencies (id serial primary key, correlation_id varchar(255) null, short_url varchar(255) not null unique, original_url varchar(255) not null unique, user_id integer null unique)")
+		Exec("CREATE TABLE IF NOT EXISTS url_dependencies (id serial primary key, correlation_id varchar(255) null, short_url varchar(255) not null unique, original_url varchar(255) not null unique, user_id integer null)")
 	if err != nil {
 		return err
 	}
@@ -86,7 +87,7 @@ func (db *database) WriteURL(url *model.URL) (string, error) {
 
 	sb := squirrel.StatementBuilder.
 		Insert("url_dependencies").
-		Columns("correlation_id", "short_url", "original_url").
+		Columns("correlation_id", "short_url", "original_url", "user_id").
 		PlaceholderFormat(squirrel.Dollar).
 		RunWith(dbConnection)
 
@@ -94,6 +95,7 @@ func (db *database) WriteURL(url *model.URL) (string, error) {
 		url.CorrelationID,
 		url.ShortURL,
 		url.OriginalURL,
+		url.UserID,
 	)
 
 	_, err := sb.Exec()
@@ -116,7 +118,6 @@ func (db *database) WriteURL(url *model.URL) (string, error) {
 }
 
 func (db *database) WriteBatchURL(urls []model.URL, serverAddress string) ([]model.URL, error) {
-
 	if err := db.repo.GetDatabase().Ping(); err != nil {
 		return nil, err
 	}
@@ -130,7 +131,7 @@ func (db *database) WriteBatchURL(urls []model.URL, serverAddress string) ([]mod
 
 	sb := squirrel.StatementBuilder.
 		Insert("url_dependencies").
-		Columns("correlation_id", "short_url", "original_url").
+		Columns("correlation_id", "short_url", "original_url", "user_id").
 		PlaceholderFormat(squirrel.Dollar).
 		RunWith(tx)
 
@@ -143,6 +144,7 @@ func (db *database) WriteBatchURL(urls []model.URL, serverAddress string) ([]mod
 			url.CorrelationID,
 			url.ShortURL,
 			url.OriginalURL,
+			url.UserID,
 		)
 
 		shortURL := fmt.Sprintf("%v%v", serverAddress, url.ShortURL)
@@ -154,6 +156,73 @@ func (db *database) WriteBatchURL(urls []model.URL, serverAddress string) ([]mod
 		if err := tx.Rollback(); err != nil {
 			return nil, errors.Wrap(err, "Rollback")
 		}
+		return nil, errors.Wrap(err, "Query")
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, errors.Wrap(err, "Commit")
+	}
+
+	return response, nil
+}
+
+func (db *database) ReadBatchURLByUserId(userId int) ([]model.URL, error) {
+	if err := db.repo.GetDatabase().Ping(); err != nil {
+		return nil, err
+	}
+
+	tx, err := db.repo.GetDatabase().Begin()
+	if err != nil {
+		return nil, err
+	}
+
+	queryRowCount := squirrel.Select("COUNT(*)").
+		From("url_dependencies").
+		Where(squirrel.Eq{"user_id": userId}).
+		PlaceholderFormat(squirrel.Dollar).
+		RunWith(tx)
+
+	var rowCount int
+	errSelect := queryRowCount.QueryRow().Scan(&rowCount)
+	if errSelect != nil {
+		if err := tx.Rollback(); err != nil {
+			return nil, errors.Wrap(err, "Select row count -> rollback")
+		}
+		return nil, errors.Wrap(errSelect, "Select row count")
+	}
+	if rowCount == 0 {
+		if err := tx.Rollback(); err != nil {
+			return nil, errors.Wrap(err, "Row count = 0 -> rollback")
+		}
+		return nil, errors.Wrap(err, "Row count = 0")
+	}
+
+	query := squirrel.Select("short_url, original_url").
+		From("url_dependencies").
+		Where(squirrel.Eq{"user_id": userId}).
+		PlaceholderFormat(squirrel.Dollar).
+		RunWith(tx)
+	rows, errSelect := query.Query()
+	defer rows.Close()
+	if errSelect != nil {
+		if err := tx.Rollback(); err != nil {
+			return nil, errors.Wrap(err, "Select urls -> rollback")
+		}
+		return nil, errors.Wrap(err, "Select urls")
+	}
+
+	response := make([]model.URL, 0, rowCount)
+	var shortURL string
+	var originalURL string
+	for rows.Next() {
+		err = rows.Scan(&shortURL, &originalURL)
+		if err != nil {
+			if err := tx.Rollback(); err != nil {
+				return nil, errors.Wrap(err, "Scan -> rollback")
+			}
+			return nil, errors.Wrap(err, "Scan")
+		}
+		response = append(response, model.URL{ShortURL: shortURL, OriginalURL: originalURL})
 	}
 
 	if err := tx.Commit(); err != nil {

@@ -2,14 +2,25 @@ package middlewares
 
 import (
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
 	"time"
 )
 
-type Claims struct {
-	jwt.RegisteredClaims
-	UserID int
-}
+type (
+	Claims struct {
+		jwt.RegisteredClaims
+		UserID int
+	}
+
+	customData struct {
+		UserId int
+	}
+	authingResponseWriter struct {
+		gin.ResponseWriter
+		customData *customData
+	}
+)
 
 const TokenExp = time.Hour * 3
 

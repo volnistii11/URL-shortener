@@ -22,6 +22,7 @@ import (
 type Provider interface {
 	CreateShortURL(ctx *gin.Context)
 	CreateShortURLBatch(ctx *gin.Context)
+	GetAllUserURLS(ctx *gin.Context)
 }
 
 func NewAPIServiceServer(repository storage.Repository, cfg config.Flags) Provider {
@@ -65,6 +66,12 @@ func (a *api) CreateShortURL(ctx *gin.Context) {
 		respondingServerAddress = fmt.Sprintf("%v/", a.flags.GetRespondingServer())
 	}
 
+	userID, ok := ctx.Get("user_id")
+	if ok != true {
+		ctx.JSON(http.StatusNoContent, "user_id is empty")
+		return
+	}
+
 	bufRequest := request{}
 	if err = json.Unmarshal(body, &bufRequest); err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
@@ -79,7 +86,10 @@ func (a *api) CreateShortURL(ctx *gin.Context) {
 			ctx.JSON(http.StatusBadRequest, errorResponse(err))
 			return
 		}
-		shortURL, err = db.WriteURL(&model.URL{OriginalURL: bufRequest.URL})
+		shortURL, err = db.WriteURL(&model.URL{
+			OriginalURL: bufRequest.URL,
+			UserID:      userID.(int),
+		})
 		if err != nil {
 			var pgErr *pgconn.PgError
 			if errors.As(err, &pgErr) {
@@ -134,6 +144,15 @@ func (a *api) CreateShortURLBatch(ctx *gin.Context) {
 	respondingServerAddress := fmt.Sprintf("%v://%v/", scheme, ctx.Request.Host)
 	if a.flags.GetRespondingServer() != "" {
 		respondingServerAddress = fmt.Sprintf("%v/", a.flags.GetRespondingServer())
+	}
+
+	userID, ok := ctx.Get("user_id")
+	if ok != true {
+		ctx.JSON(http.StatusNoContent, "user_id is empty")
+		return
+	}
+	for i, _ := range urls {
+		urls[i].UserID = userID.(int)
 	}
 
 	switch a.GetStorageType() {
@@ -192,6 +211,26 @@ func (a *api) CreateShortURLBatch(ctx *gin.Context) {
 		}
 		ctx.JSON(http.StatusCreated, response)
 	}
+}
+
+func (a *api) GetAllUserURLS(ctx *gin.Context) {
+	var (
+		urls []model.URL
+		err  error
+	)
+	userID, ok := ctx.Get("user_id")
+	if ok != true {
+		ctx.JSON(http.StatusNoContent, "user_id is empty")
+		return
+	}
+
+	db := database.NewInitializerReaderWriter(a.repo, a.flags)
+	urls, err = db.ReadBatchURLByUserId(userID.(int))
+	if err != nil {
+		ctx.JSON(http.StatusNoContent, "something wrong")
+		return
+	}
+	ctx.JSON(http.StatusOK, urls)
 }
 
 func (a *api) GetStorageType() string {

@@ -112,6 +112,12 @@ func (m *middleware) Auth() gin.HandlerFunc {
 			return
 		}
 
+		customData := &customData{UserId: userID}
+		ctx.Writer = &authingResponseWriter{
+			ResponseWriter: ctx.Writer,
+			customData:     customData,
+		}
+		ctx.Set("user_id", userID)
 		ctx.Next()
 	}
 }
