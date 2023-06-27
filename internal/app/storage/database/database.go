@@ -20,7 +20,7 @@ type InitializerReaderWriter interface {
 	ReadURL(shortURL string) (string, error)
 	WriteURL(urls *model.URL) (string, error)
 	WriteBatchURL(urls []model.URL, serverAddress string) ([]model.URL, error)
-	ReadBatchURLByUserId(userId int) ([]model.URL, error)
+	ReadBatchURLByUserID(userId int) ([]model.URL, error)
 }
 
 func NewInitializerReaderWriter(repository storage.Repository, cfg config.Flags) InitializerReaderWriter {
@@ -166,7 +166,7 @@ func (db *database) WriteBatchURL(urls []model.URL, serverAddress string) ([]mod
 	return response, nil
 }
 
-func (db *database) ReadBatchURLByUserId(userId int) ([]model.URL, error) {
+func (db *database) ReadBatchURLByUserID(userID int) ([]model.URL, error) {
 	if err := db.repo.GetDatabase().Ping(); err != nil {
 		return nil, err
 	}
@@ -178,7 +178,7 @@ func (db *database) ReadBatchURLByUserId(userId int) ([]model.URL, error) {
 
 	queryRowCount := squirrel.Select("COUNT(*)").
 		From("url_dependencies").
-		Where(squirrel.Eq{"user_id": userId}).
+		Where(squirrel.Eq{"user_id": userID}).
 		PlaceholderFormat(squirrel.Dollar).
 		RunWith(tx)
 
@@ -199,17 +199,17 @@ func (db *database) ReadBatchURLByUserId(userId int) ([]model.URL, error) {
 
 	query := squirrel.Select("short_url, original_url").
 		From("url_dependencies").
-		Where(squirrel.Eq{"user_id": userId}).
+		Where(squirrel.Eq{"user_id": userID}).
 		PlaceholderFormat(squirrel.Dollar).
 		RunWith(tx)
 	rows, errSelect := query.Query()
-	defer rows.Close()
 	if errSelect != nil {
 		if err := tx.Rollback(); err != nil {
 			return nil, errors.Wrap(err, "Select urls -> rollback")
 		}
 		return nil, errors.Wrap(err, "Select urls")
 	}
+	defer rows.Close()
 
 	response := make([]model.URL, 0, rowCount)
 	var shortURL string

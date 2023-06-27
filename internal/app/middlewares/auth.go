@@ -14,7 +14,7 @@ type (
 	}
 
 	customData struct {
-		UserId int
+		UserID int
 	}
 	authingResponseWriter struct {
 		gin.ResponseWriter

@@ -67,7 +67,7 @@ func (a *api) CreateShortURL(ctx *gin.Context) {
 	}
 
 	userID, ok := ctx.Get("user_id")
-	if ok != true {
+	if !ok {
 		ctx.JSON(http.StatusNoContent, "user_id is empty")
 		return
 	}
@@ -147,11 +147,11 @@ func (a *api) CreateShortURLBatch(ctx *gin.Context) {
 	}
 
 	userID, ok := ctx.Get("user_id")
-	if ok != true {
+	if !ok {
 		ctx.JSON(http.StatusNoContent, "user_id is empty")
 		return
 	}
-	for i, _ := range urls {
+	for i := range urls {
 		urls[i].UserID = userID.(int)
 	}
 
@@ -219,13 +219,13 @@ func (a *api) GetAllUserURLS(ctx *gin.Context) {
 		err  error
 	)
 	userID, ok := ctx.Get("user_id")
-	if ok != true {
+	if !ok {
 		ctx.JSON(http.StatusNoContent, "user_id is empty")
 		return
 	}
 
 	db := database.NewInitializerReaderWriter(a.repo, a.flags)
-	urls, err = db.ReadBatchURLByUserId(userID.(int))
+	urls, err = db.ReadBatchURLByUserID(userID.(int))
 	if err != nil {
 		ctx.JSON(http.StatusNoContent, "something wrong")
 		return
