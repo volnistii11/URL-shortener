@@ -209,6 +209,12 @@ func (db *database) ReadBatchURLByUserID(userID int) ([]model.URL, error) {
 		}
 		return nil, errors.Wrap(err, "Select urls")
 	}
+	if rows.Err() != nil {
+		if err := tx.Rollback(); err != nil {
+			return nil, errors.Wrap(err, "rows.err -> rollback")
+		}
+		return nil, errors.Wrap(err, "rows.err")
+	}
 	defer rows.Close()
 
 	response := make([]model.URL, 0, rowCount)
