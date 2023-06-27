@@ -2,6 +2,7 @@ package database
 
 import (
 	"fmt"
+	"github.com/volnistii11/URL-shortener/internal/model"
 
 	"github.com/volnistii11/URL-shortener/internal/app/config"
 	"github.com/volnistii11/URL-shortener/internal/app/storage"
@@ -17,8 +18,8 @@ import (
 type InitializerReaderWriter interface {
 	CreateTableIfNotExists() error
 	ReadURL(shortURL string) (string, error)
-	WriteURL(urls *storage.URLStorage) (string, error)
-	WriteBatchURL(urls []storage.URLStorage, serverAddress string) ([]storage.URLStorage, error)
+	WriteURL(urls *model.URL) (string, error)
+	WriteBatchURL(urls []model.URL, serverAddress string) ([]model.URL, error)
 }
 
 func NewInitializerReaderWriter(repository storage.Repository, cfg config.Flags) InitializerReaderWriter {
@@ -72,7 +73,7 @@ func (db *database) ReadURL(shortURL string) (string, error) {
 	return originalURL, nil
 }
 
-func (db *database) WriteURL(url *storage.URLStorage) (string, error) {
+func (db *database) WriteURL(url *model.URL) (string, error) {
 	dbConnection := db.repo.GetDatabase()
 
 	if err := dbConnection.Ping(); err != nil {
@@ -114,7 +115,7 @@ func (db *database) WriteURL(url *storage.URLStorage) (string, error) {
 	return url.ShortURL, nil
 }
 
-func (db *database) WriteBatchURL(urls []storage.URLStorage, serverAddress string) ([]storage.URLStorage, error) {
+func (db *database) WriteBatchURL(urls []model.URL, serverAddress string) ([]model.URL, error) {
 
 	if err := db.repo.GetDatabase().Ping(); err != nil {
 		return nil, err
@@ -125,7 +126,7 @@ func (db *database) WriteBatchURL(urls []storage.URLStorage, serverAddress strin
 		return nil, err
 	}
 
-	response := make([]storage.URLStorage, 0, len(urls))
+	response := make([]model.URL, 0, len(urls))
 
 	sb := squirrel.StatementBuilder.
 		Insert("url_dependencies").
@@ -145,7 +146,7 @@ func (db *database) WriteBatchURL(urls []storage.URLStorage, serverAddress strin
 		)
 
 		shortURL := fmt.Sprintf("%v%v", serverAddress, url.ShortURL)
-		response = append(response, storage.URLStorage{CorrelationID: url.CorrelationID, ShortURL: shortURL})
+		response = append(response, model.URL{CorrelationID: url.CorrelationID, ShortURL: shortURL})
 	}
 
 	_, err = sb.Exec()

@@ -6,6 +6,7 @@ import (
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/volnistii11/URL-shortener/internal/app/storage/database"
+	"github.com/volnistii11/URL-shortener/internal/model"
 	"net/http"
 
 	"github.com/volnistii11/URL-shortener/internal/app/config"
@@ -65,7 +66,7 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 			ctx.JSON(http.StatusBadRequest, errorResponse(err))
 			return
 		}
-		urls := storage.URLStorage{}
+		urls := model.URL{}
 		err := json.Unmarshal(body, &urls)
 		if err != nil {
 			urls.OriginalURL = string(body)
@@ -89,7 +90,7 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 			return
 		}
 		defer Producer.Close()
-		bufEvent := storage.URLStorage{}
+		bufEvent := model.URL{}
 		err = json.Unmarshal(body, &bufEvent)
 		if err != nil {
 			bufEvent.OriginalURL = string(body)

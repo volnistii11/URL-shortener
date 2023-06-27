@@ -9,6 +9,7 @@ import (
 	"github.com/volnistii11/URL-shortener/internal/app/storage/database"
 	"github.com/volnistii11/URL-shortener/internal/app/storage/file"
 	"github.com/volnistii11/URL-shortener/internal/app/utils"
+	"github.com/volnistii11/URL-shortener/internal/model"
 	"math/rand"
 	"net/http"
 
@@ -78,7 +79,7 @@ func (a *api) CreateShortURL(ctx *gin.Context) {
 			ctx.JSON(http.StatusBadRequest, errorResponse(err))
 			return
 		}
-		shortURL, err = db.WriteURL(&storage.URLStorage{OriginalURL: bufRequest.URL})
+		shortURL, err = db.WriteURL(&model.URL{OriginalURL: bufRequest.URL})
 		if err != nil {
 			var pgErr *pgconn.PgError
 			if errors.As(err, &pgErr) {
@@ -120,7 +121,7 @@ func (a *api) CreateShortURLBatch(ctx *gin.Context) {
 		return
 	}
 
-	var urls []storage.URLStorage
+	var urls []model.URL
 	if err = json.Unmarshal(body, &urls); err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
@@ -157,7 +158,7 @@ func (a *api) CreateShortURLBatch(ctx *gin.Context) {
 		}
 		defer Producer.Close()
 
-		response := make([]storage.URLStorage, 0, len(urls))
+		response := make([]model.URL, 0, len(urls))
 		for _, url := range urls {
 			if url.ShortURL == "" {
 				url.ShortURL = utils.RandString(10)
@@ -172,11 +173,11 @@ func (a *api) CreateShortURLBatch(ctx *gin.Context) {
 				return
 			}
 			shortURL := fmt.Sprintf("%v%v", respondingServerAddress, url.ShortURL)
-			response = append(response, storage.URLStorage{CorrelationID: url.CorrelationID, ShortURL: shortURL})
+			response = append(response, model.URL{CorrelationID: url.CorrelationID, ShortURL: shortURL})
 		}
 		ctx.JSON(http.StatusCreated, response)
 	case "memory":
-		response := make([]storage.URLStorage, 0, len(urls))
+		response := make([]model.URL, 0, len(urls))
 		for _, url := range urls {
 			if url.ShortURL == "" {
 				url.ShortURL = utils.RandString(10)
@@ -187,7 +188,7 @@ func (a *api) CreateShortURLBatch(ctx *gin.Context) {
 				return
 			}
 			shortURL := fmt.Sprintf("%v%v", respondingServerAddress, url.ShortURL)
-			response = append(response, storage.URLStorage{CorrelationID: url.CorrelationID, ShortURL: shortURL})
+			response = append(response, model.URL{CorrelationID: url.CorrelationID, ShortURL: shortURL})
 		}
 		ctx.JSON(http.StatusCreated, response)
 	}
