@@ -66,10 +66,7 @@ func (a *api) CreateShortURL(ctx *gin.Context) {
 		respondingServerAddress = fmt.Sprintf("%v/", a.flags.GetRespondingServer())
 	}
 
-	userID, ok := ctx.Get("user_id")
-	if !ok {
-		userID = nil
-	}
+	userID, _ := ctx.Get("user_id")
 
 	bufRequest := request{}
 	if err = json.Unmarshal(body, &bufRequest); err != nil {
@@ -146,11 +143,10 @@ func (a *api) CreateShortURLBatch(ctx *gin.Context) {
 	}
 
 	userID, ok := ctx.Get("user_id")
-	if !ok {
-		userID = nil
-	}
-	for i := range urls {
-		urls[i].UserID = userID.(int)
+	if ok {
+		for i := range urls {
+			urls[i].UserID = userID.(int)
+		}
 	}
 
 	switch a.GetStorageType() {
