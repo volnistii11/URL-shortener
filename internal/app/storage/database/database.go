@@ -20,7 +20,7 @@ type InitializerReaderWriter interface {
 	ReadURL(shortURL string) (string, error)
 	WriteURL(urls *model.URL) (string, error)
 	WriteBatchURL(urls []model.URL, serverAddress string) ([]model.URL, error)
-	ReadBatchURLByUserID(userID int) ([]model.URL, error)
+	ReadBatchURLByUserID(userID int, serverAddress string) ([]model.URL, error)
 }
 
 func NewInitializerReaderWriter(repository storage.Repository, cfg config.Flags) InitializerReaderWriter {
@@ -166,7 +166,7 @@ func (db *database) WriteBatchURL(urls []model.URL, serverAddress string) ([]mod
 	return response, nil
 }
 
-func (db *database) ReadBatchURLByUserID(userID int) ([]model.URL, error) {
+func (db *database) ReadBatchURLByUserID(userID int, serverAddress string) ([]model.URL, error) {
 	if err := db.repo.GetDatabase().Ping(); err != nil {
 		return nil, err
 	}
@@ -228,6 +228,7 @@ func (db *database) ReadBatchURLByUserID(userID int) ([]model.URL, error) {
 			}
 			return nil, errors.Wrap(err, "Scan")
 		}
+		shortURL = fmt.Sprintf("%v%v", serverAddress, shortURL)
 		response = append(response, model.URL{ShortURL: shortURL, OriginalURL: originalURL})
 	}
 

@@ -210,7 +210,6 @@ func (a *api) CreateShortURLBatch(ctx *gin.Context) {
 }
 
 func (a *api) GetAllUserURLS(ctx *gin.Context) {
-	fmt.Println(a.GetStorageType())
 	var (
 		urls []model.URL
 		err  error
@@ -221,13 +220,21 @@ func (a *api) GetAllUserURLS(ctx *gin.Context) {
 		return
 	}
 
+	scheme := "http"
+	if ctx.Request.TLS != nil {
+		scheme = "https"
+	}
+	respondingServerAddress := fmt.Sprintf("%v://%v/", scheme, ctx.Request.Host)
+	if a.flags.GetRespondingServer() != "" {
+		respondingServerAddress = fmt.Sprintf("%v/", a.flags.GetRespondingServer())
+	}
+
 	db := database.NewInitializerReaderWriter(a.repo, a.flags)
-	urls, err = db.ReadBatchURLByUserID(userID.(int))
+	urls, err = db.ReadBatchURLByUserID(userID.(int), respondingServerAddress)
 	if err != nil {
 		ctx.JSON(http.StatusNoContent, "something wrong")
 		return
 	}
-	fmt.Println("GetAllUserURLS", urls)
 	ctx.JSON(http.StatusOK, urls)
 }
 
