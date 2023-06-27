@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/volnistii11/URL-shortener/internal/app/storage/database"
@@ -36,6 +37,7 @@ type handlerURL struct {
 }
 
 func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
+	fmt.Println(h.GetStorageType())
 	ctx.Header("content-type", "text/plain; charset=utf-8")
 	body, err := ctx.GetRawData()
 	if err != nil {
@@ -117,12 +119,11 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 			return
 		}
 	}
-
+	fmt.Println("CreateShortURL", shortURL)
 	ctx.String(http.StatusCreated, "%v%v", respondingServerAddress, shortURL)
 }
 
 func (h *handlerURL) GetFullURL(ctx *gin.Context) {
-
 	var fullURL string
 	var err error
 	shortURL := ctx.Params.ByName("short_url")

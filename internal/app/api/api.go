@@ -112,6 +112,7 @@ func (a *api) CreateShortURL(ctx *gin.Context) {
 	buffResponse := response{
 		Result: fmt.Sprintf("%v%v", respondingServerAddress, shortURL),
 	}
+	fmt.Println("CreateShortURL", buffResponse)
 	ctx.JSON(http.StatusCreated, buffResponse)
 }
 
@@ -226,6 +227,7 @@ func (a *api) GetAllUserURLS(ctx *gin.Context) {
 		ctx.JSON(http.StatusNoContent, "something wrong")
 		return
 	}
+	fmt.Println("GetAllUserURLS", urls)
 	ctx.JSON(http.StatusOK, urls)
 }
 
