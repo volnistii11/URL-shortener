@@ -208,6 +208,7 @@ func (a *api) CreateShortURLBatch(ctx *gin.Context) {
 }
 
 func (a *api) GetAllUserURLS(ctx *gin.Context) {
+	fmt.Println(a.GetStorageType())
 	var (
 		urls []model.URL
 		err  error
