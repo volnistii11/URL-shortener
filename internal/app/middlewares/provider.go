@@ -100,7 +100,9 @@ func (m *middleware) Auth() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		cookie, err := ctx.Cookie("cookie_auth")
 		if err != nil {
-			tokenString, _ := BuildJWTString(rand.Intn(1000))
+			userID := rand.Intn(1000)
+			tokenString, _ := BuildJWTString(userID)
+			ctx.Set("user_id", userID)
 			ctx.SetCookie("cookie_auth", tokenString, 3600, "/", "localhost", false, false)
 			ctx.Next()
 			return
