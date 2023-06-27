@@ -20,7 +20,7 @@ type InitializerReaderWriter interface {
 	ReadURL(shortURL string) (string, error)
 	WriteURL(urls *model.URL) (string, error)
 	WriteBatchURL(urls []model.URL, serverAddress string) ([]model.URL, error)
-	ReadBatchURLByUserID(userId int) ([]model.URL, error)
+	ReadBatchURLByUserID(userID int) ([]model.URL, error)
 }
 
 func NewInitializerReaderWriter(repository storage.Repository, cfg config.Flags) InitializerReaderWriter {
@@ -202,8 +202,8 @@ func (db *database) ReadBatchURLByUserID(userID int) ([]model.URL, error) {
 		Where(squirrel.Eq{"user_id": userID}).
 		PlaceholderFormat(squirrel.Dollar).
 		RunWith(tx)
-	rows, errSelect := query.Query()
-	if errSelect != nil {
+	rows, err := query.Query()
+	if err != nil {
 		if err := tx.Rollback(); err != nil {
 			return nil, errors.Wrap(err, "Select urls -> rollback")
 		}
