@@ -3,7 +3,6 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/volnistii11/URL-shortener/internal/app/storage/database"
@@ -37,7 +36,6 @@ type handlerURL struct {
 }
 
 func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
-	fmt.Println(h.GetStorageType())
 	ctx.Header("content-type", "text/plain; charset=utf-8")
 	body, err := ctx.GetRawData()
 	if err != nil {
@@ -50,6 +48,8 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
+
+	userID, _ := ctx.Get("user_id")
 
 	scheme := "http"
 	if ctx.Request.TLS != nil {
@@ -68,12 +68,13 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 			ctx.JSON(http.StatusBadRequest, errorResponse(err))
 			return
 		}
-		urls := model.URL{}
-		err := json.Unmarshal(body, &urls)
+		url := model.URL{}
+		err := json.Unmarshal(body, &url)
 		if err != nil {
-			urls.OriginalURL = string(body)
+			url.OriginalURL = string(body)
 		}
-		shortURL, err = db.WriteURL(&urls)
+		url.UserID = userID.(int)
+		shortURL, err = db.WriteURL(&url)
 		if err != nil {
 			var pgErr *pgconn.PgError
 			if errors.As(err, &pgErr) {
@@ -119,7 +120,7 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 			return
 		}
 	}
-	fmt.Println("CreateShortURL", shortURL)
+
 	ctx.String(http.StatusCreated, "%v%v", respondingServerAddress, shortURL)
 }
 
