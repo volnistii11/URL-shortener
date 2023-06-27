@@ -235,6 +235,10 @@ func (a *api) GetAllUserURLS(ctx *gin.Context) {
 		ctx.JSON(http.StatusNoContent, "something wrong")
 		return
 	}
+	if len(urls) == 0 {
+		ctx.JSON(http.StatusNoContent, "this user has no records")
+		return
+	}
 	ctx.JSON(http.StatusOK, urls)
 }
 
