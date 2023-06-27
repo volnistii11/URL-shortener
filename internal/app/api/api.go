@@ -46,6 +46,7 @@ type response struct {
 }
 
 func (a *api) CreateShortURL(ctx *gin.Context) {
+	fmt.Println(a.GetStorageType())
 	ctx.Header("content-type", "application/json")
 	body, err := ctx.GetRawData()
 	if err != nil {
