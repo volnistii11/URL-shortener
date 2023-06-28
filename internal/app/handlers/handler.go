@@ -125,13 +125,26 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 }
 
 func (h *handlerURL) GetFullURL(ctx *gin.Context) {
-	var fullURL string
-	var err error
+	var (
+		deletedFlag bool
+		fullURL     string
+		err         error
+	)
 	shortURL := ctx.Params.ByName("short_url")
 
 	switch h.GetStorageType() {
 	case "database":
 		db := database.NewInitializerReaderWriter(h.repo, h.flags)
+
+		deletedFlag, err = db.CheckRecordDeletedOrNot(shortURL)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, errorResponse(err))
+			return
+		}
+		if deletedFlag {
+			ctx.Status(http.StatusGone)
+			return
+		}
 		fullURL, err = db.ReadURL(shortURL)
 	default:
 		fullURL, err = h.repo.ReadURL(shortURL)

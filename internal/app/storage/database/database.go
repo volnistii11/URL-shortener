@@ -21,6 +21,8 @@ type InitializerReaderWriter interface {
 	WriteURL(urls *model.URL) (string, error)
 	WriteBatchURL(urls []model.URL, serverAddress string) ([]model.URL, error)
 	ReadBatchURLByUserID(userID int, serverAddress string) ([]model.URL, error)
+	UpdateDeletionStatusOfBatchURL(urls []string, userID int) error
+	CheckRecordDeletedOrNot(shortURL string) (bool, error)
 }
 
 func NewInitializerReaderWriter(repository storage.Repository, cfg config.Flags) InitializerReaderWriter {
@@ -45,7 +47,7 @@ func (db *database) CreateTableIfNotExists() error {
 	//}
 
 	_, err := db.repo.GetDatabase().
-		Exec("CREATE TABLE IF NOT EXISTS url_dependencies (id serial primary key, correlation_id varchar(255) null, short_url varchar(255) not null unique, original_url varchar(255) not null unique, user_id integer null)")
+		Exec("CREATE TABLE IF NOT EXISTS url_dependencies (id serial primary key, correlation_id varchar(255) null, short_url varchar(255) not null unique, original_url varchar(255) not null unique, user_id integer null, is_deleted boolean default false)")
 	if err != nil {
 		return err
 	}
@@ -56,7 +58,7 @@ func (db *database) CreateTableIfNotExists() error {
 func (db *database) ReadURL(shortURL string) (string, error) {
 	dbConnection := db.repo.GetDatabase()
 	if err := dbConnection.Ping(); err != nil {
-		return "", err
+		return "", errors.Wrap(err, "ReadURL")
 	}
 
 	sb := squirrel.Select("original_url").
@@ -68,7 +70,7 @@ func (db *database) ReadURL(shortURL string) (string, error) {
 	var originalURL string
 	err := sb.QueryRow().Scan(&originalURL)
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "ReadURL")
 	}
 
 	return originalURL, nil
@@ -237,6 +239,44 @@ func (db *database) ReadBatchURLByUserID(userID int, serverAddress string) ([]mo
 	}
 
 	return response, nil
+}
+
+func (db *database) UpdateDeletionStatusOfBatchURL(urls []string, userID int) error {
+	if err := db.repo.GetDatabase().Ping(); err != nil {
+		return err
+	}
+
+	query := squirrel.Update("url_dependencies").
+		Set("is_deleted", true).
+		Where(squirrel.Eq{"user_id": userID, "short_url": urls}).
+		PlaceholderFormat(squirrel.Dollar).
+		RunWith(db.repo.GetDatabase())
+
+	_, err := query.Exec()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (db *database) CheckRecordDeletedOrNot(shortURL string) (bool, error) {
+	dbConnection := db.repo.GetDatabase()
+	if err := dbConnection.Ping(); err != nil {
+		return false, errors.Wrap(err, "CheckRecordDeletedOrNot")
+	}
+
+	sb := squirrel.Select("is_deleted").
+		From("url_dependencies").
+		Where(squirrel.Eq{"short_url": shortURL}).
+		PlaceholderFormat(squirrel.Dollar).
+		RunWith(dbConnection)
+
+	var deletedFlag bool
+	err := sb.QueryRow().Scan(&deletedFlag)
+	if err != nil {
+		return false, errors.Wrap(err, "CheckRecordDeletedOrNot Scan")
+	}
+	return deletedFlag, nil
 }
 
 func runMigrations(dsn string) error {

@@ -43,5 +43,6 @@ func (srv *server) Router(repository storage.Repository, cfg config.Flags) *gin.
 	srv.httpServer.POST("/api/shorten", a.CreateShortURL)
 	srv.httpServer.POST("/api/shorten/batch", a.CreateShortURLBatch)
 	srv.httpServer.GET("/api/user/urls", a.GetAllUserURLS)
+	srv.httpServer.DELETE("api/user/urls", a.DeleteUserURLS)
 	return srv.httpServer
 }

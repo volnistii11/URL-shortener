@@ -23,6 +23,7 @@ type Provider interface {
 	CreateShortURL(ctx *gin.Context)
 	CreateShortURLBatch(ctx *gin.Context)
 	GetAllUserURLS(ctx *gin.Context)
+	DeleteUserURLS(ctx *gin.Context)
 }
 
 func NewAPIServiceServer(repository storage.Repository, cfg config.Flags) Provider {
@@ -240,6 +241,31 @@ func (a *api) GetAllUserURLS(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusOK, urls)
+}
+
+func (a *api) DeleteUserURLS(ctx *gin.Context) {
+	ctx.Status(http.StatusAccepted)
+
+	userID, ok := ctx.Get("user_id")
+	if !ok {
+		return
+	}
+
+	body, err := ctx.GetRawData()
+	if err != nil {
+		return
+	}
+
+	var urls []string
+	if err = json.Unmarshal(body, &urls); err != nil {
+		return
+	}
+
+	db := database.NewInitializerReaderWriter(a.repo, a.flags)
+	if err = db.UpdateDeletionStatusOfBatchURL(urls, userID.(int)); err != nil {
+		fmt.Println(err)
+		return
+	}
 }
 
 func (a *api) GetStorageType() string {
