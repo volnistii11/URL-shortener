@@ -38,10 +38,6 @@ type database struct {
 }
 
 func (db *database) CreateTableIfNotExists() error {
-	if err := db.repo.GetDatabase().Ping(); err != nil {
-		return err
-	}
-
 	//if err := runMigrations(db.flags.GetDatabaseDSN()); err != nil {
 	//	return errors.Wrap(err, "Start migrations")
 	//}
@@ -57,9 +53,6 @@ func (db *database) CreateTableIfNotExists() error {
 
 func (db *database) ReadURL(shortURL string) (string, error) {
 	dbConnection := db.repo.GetDatabase()
-	if err := dbConnection.Ping(); err != nil {
-		return "", errors.Wrap(err, "ReadURL")
-	}
 
 	sb := squirrel.Select("original_url").
 		From("url_dependencies").
@@ -78,10 +71,6 @@ func (db *database) ReadURL(shortURL string) (string, error) {
 
 func (db *database) WriteURL(url *model.URL) (string, error) {
 	dbConnection := db.repo.GetDatabase()
-
-	if err := dbConnection.Ping(); err != nil {
-		return "", err
-	}
 
 	if url.ShortURL == "" {
 		url.ShortURL = utils.RandString(10)
@@ -120,10 +109,6 @@ func (db *database) WriteURL(url *model.URL) (string, error) {
 }
 
 func (db *database) WriteBatchURL(urls []model.URL, serverAddress string) ([]model.URL, error) {
-	if err := db.repo.GetDatabase().Ping(); err != nil {
-		return nil, err
-	}
-
 	tx, err := db.repo.GetDatabase().Begin()
 	if err != nil {
 		return nil, err
@@ -169,10 +154,6 @@ func (db *database) WriteBatchURL(urls []model.URL, serverAddress string) ([]mod
 }
 
 func (db *database) ReadBatchURLByUserID(userID int, serverAddress string) ([]model.URL, error) {
-	if err := db.repo.GetDatabase().Ping(); err != nil {
-		return nil, err
-	}
-
 	tx, err := db.repo.GetDatabase().Begin()
 	if err != nil {
 		return nil, err
@@ -242,10 +223,6 @@ func (db *database) ReadBatchURLByUserID(userID int, serverAddress string) ([]mo
 }
 
 func (db *database) UpdateDeletionStatusOfBatchURL(urls []string, userID int) error {
-	if err := db.repo.GetDatabase().Ping(); err != nil {
-		return err
-	}
-
 	query := squirrel.Update("url_dependencies").
 		Set("is_deleted", true).
 		Where(squirrel.Eq{"user_id": userID, "short_url": urls}).
@@ -261,9 +238,6 @@ func (db *database) UpdateDeletionStatusOfBatchURL(urls []string, userID int) er
 
 func (db *database) CheckRecordDeletedOrNot(shortURL string) (bool, error) {
 	dbConnection := db.repo.GetDatabase()
-	if err := dbConnection.Ping(); err != nil {
-		return false, errors.Wrap(err, "CheckRecordDeletedOrNot")
-	}
 
 	sb := squirrel.Select("is_deleted").
 		From("url_dependencies").

@@ -12,5 +12,10 @@ func NewConnection(driver string, dsn string) (*sqlx.DB, error) {
 		return nil, err
 	}
 
+	if err = db.Ping(); err != nil {
+		zap.L().Error("failed to ping the db", zap.Error(err))
+		return nil, err
+	}
+
 	return db, nil
 }
