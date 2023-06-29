@@ -2,18 +2,18 @@ package database
 
 import (
 	"github.com/jmoiron/sqlx"
-	"go.uber.org/zap"
+	"github.com/pkg/errors"
 )
 
 func NewConnection(driver string, dsn string) (*sqlx.DB, error) {
 	db, err := sqlx.Open(driver, dsn)
 	if err != nil {
-		zap.L().Error("failed to create a db connection", zap.Error(err))
+		errors.Wrap(err, "failed to create a db connection")
 		return nil, err
 	}
 
 	if err = db.Ping(); err != nil {
-		zap.L().Error("failed to ping the db", zap.Error(err))
+		errors.Wrap(err, "failed to ping the db")
 		return nil, err
 	}
 

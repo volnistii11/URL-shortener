@@ -23,7 +23,9 @@ func main() {
 	if err != nil {
 		log.Printf("Error : %v\n", err)
 	}
-	defer db.Close()
+	if db != nil {
+		defer db.Close()
+	}
 
 	repo := storage.NewRepository(db)
 
