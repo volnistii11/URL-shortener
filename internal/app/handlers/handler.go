@@ -68,13 +68,13 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 			ctx.JSON(http.StatusBadRequest, errorResponse(err))
 			return
 		}
-		url := model.URL{}
+		url := &model.URL{}
 		err := json.Unmarshal(body, &url)
 		if err != nil {
 			url.OriginalURL = string(body)
 		}
 		url.UserID = userID.(int)
-		shortURL, err = db.WriteURL(&url)
+		shortURL, err = db.WriteURL(url)
 		if err != nil {
 			var pgErr *pgconn.PgError
 			if errors.As(err, &pgErr) {
@@ -93,8 +93,8 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 			return
 		}
 		defer Producer.Close()
-		bufEvent := model.URL{}
-		err = json.Unmarshal(body, &bufEvent)
+		bufEvent := &model.URL{}
+		err = json.Unmarshal(body, bufEvent)
 		if err != nil {
 			bufEvent.OriginalURL = string(body)
 			shortURL, err = h.repo.WriteURL(bufEvent.OriginalURL)
@@ -111,7 +111,7 @@ func (h *handlerURL) CreateShortURL(ctx *gin.Context) {
 				return
 			}
 		}
-		Producer.WriteEvent(&bufEvent)
+		Producer.WriteEvent(bufEvent)
 	case "memory":
 		originalURL := string(body)
 		shortURL, err = h.repo.WriteURL(originalURL)

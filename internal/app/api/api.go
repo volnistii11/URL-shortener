@@ -47,7 +47,6 @@ type response struct {
 }
 
 func (a *api) CreateShortURL(ctx *gin.Context) {
-	fmt.Println(a.GetStorageType())
 	ctx.Header("content-type", "application/json")
 	body, err := ctx.GetRawData()
 	if err != nil {
@@ -70,8 +69,8 @@ func (a *api) CreateShortURL(ctx *gin.Context) {
 
 	userID, _ := ctx.Get("user_id")
 
-	bufRequest := request{}
-	if err = json.Unmarshal(body, &bufRequest); err != nil {
+	bufRequest := &request{}
+	if err = json.Unmarshal(body, bufRequest); err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
@@ -113,7 +112,6 @@ func (a *api) CreateShortURL(ctx *gin.Context) {
 	buffResponse := response{
 		Result: fmt.Sprintf("%v%v", respondingServerAddress, shortURL),
 	}
-	fmt.Println("CreateShortURL", buffResponse)
 	ctx.JSON(http.StatusCreated, buffResponse)
 }
 
