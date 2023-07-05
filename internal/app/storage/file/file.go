@@ -3,6 +3,7 @@ package file
 import (
 	"bufio"
 	"encoding/json"
+	"github.com/volnistii11/URL-shortener/internal/model"
 	"log"
 	"os"
 
@@ -29,7 +30,7 @@ func NewProducer(filename string) (*Producer, error) {
 	}, nil
 }
 
-func (p *Producer) WriteEvent(event *storage.URLStorage) error {
+func (p *Producer) WriteEvent(event *model.URL) error {
 	data, err := json.Marshal(&event)
 	if err != nil {
 		return err
@@ -72,7 +73,7 @@ func NewConsumer(filename string) (*Consumer, error) {
 	}, nil
 }
 
-func (c *Consumer) ReadEvent() (*storage.URLStorage, error) {
+func (c *Consumer) ReadEvent() (*model.URL, error) {
 	// читаем данные до символа переноса строки
 	data, err := c.reader.ReadBytes('\n')
 	if err != nil {
@@ -80,7 +81,7 @@ func (c *Consumer) ReadEvent() (*storage.URLStorage, error) {
 	}
 
 	// преобразуем данные из JSON-представления в структуру
-	event := storage.URLStorage{}
+	event := model.URL{}
 	err = json.Unmarshal(data, &event)
 	if err != nil {
 		return nil, err

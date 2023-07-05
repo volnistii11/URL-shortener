@@ -9,6 +9,7 @@ import (
 	"github.com/volnistii11/URL-shortener/internal/app/storage/database"
 	"github.com/volnistii11/URL-shortener/internal/app/storage/file"
 	"github.com/volnistii11/URL-shortener/internal/app/utils"
+	"github.com/volnistii11/URL-shortener/internal/model"
 	"math/rand"
 	"net/http"
 
@@ -21,6 +22,8 @@ import (
 type Provider interface {
 	CreateShortURL(ctx *gin.Context)
 	CreateShortURLBatch(ctx *gin.Context)
+	GetAllUserURLS(ctx *gin.Context)
+	DeleteUserURLS(ctx *gin.Context)
 }
 
 func NewAPIServiceServer(repository storage.Repository, cfg config.Flags) Provider {
@@ -64,8 +67,10 @@ func (a *api) CreateShortURL(ctx *gin.Context) {
 		respondingServerAddress = fmt.Sprintf("%v/", a.flags.GetRespondingServer())
 	}
 
-	bufRequest := request{}
-	if err = json.Unmarshal(body, &bufRequest); err != nil {
+	userID, _ := ctx.Get("user_id")
+
+	bufRequest := &request{}
+	if err = json.Unmarshal(body, bufRequest); err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
@@ -78,7 +83,10 @@ func (a *api) CreateShortURL(ctx *gin.Context) {
 			ctx.JSON(http.StatusBadRequest, errorResponse(err))
 			return
 		}
-		shortURL, err = db.WriteURL(&storage.URLStorage{OriginalURL: bufRequest.URL})
+		shortURL, err = db.WriteURL(&model.URL{
+			OriginalURL: bufRequest.URL,
+			UserID:      userID.(int),
+		})
 		if err != nil {
 			var pgErr *pgconn.PgError
 			if errors.As(err, &pgErr) {
@@ -120,7 +128,7 @@ func (a *api) CreateShortURLBatch(ctx *gin.Context) {
 		return
 	}
 
-	var urls []storage.URLStorage
+	var urls []model.URL
 	if err = json.Unmarshal(body, &urls); err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
@@ -133,6 +141,13 @@ func (a *api) CreateShortURLBatch(ctx *gin.Context) {
 	respondingServerAddress := fmt.Sprintf("%v://%v/", scheme, ctx.Request.Host)
 	if a.flags.GetRespondingServer() != "" {
 		respondingServerAddress = fmt.Sprintf("%v/", a.flags.GetRespondingServer())
+	}
+
+	userID, ok := ctx.Get("user_id")
+	if ok {
+		for i := range urls {
+			urls[i].UserID = userID.(int)
+		}
 	}
 
 	switch a.GetStorageType() {
@@ -157,7 +172,7 @@ func (a *api) CreateShortURLBatch(ctx *gin.Context) {
 		}
 		defer Producer.Close()
 
-		response := make([]storage.URLStorage, 0, len(urls))
+		response := make([]model.URL, 0, len(urls))
 		for _, url := range urls {
 			if url.ShortURL == "" {
 				url.ShortURL = utils.RandString(10)
@@ -172,11 +187,11 @@ func (a *api) CreateShortURLBatch(ctx *gin.Context) {
 				return
 			}
 			shortURL := fmt.Sprintf("%v%v", respondingServerAddress, url.ShortURL)
-			response = append(response, storage.URLStorage{CorrelationID: url.CorrelationID, ShortURL: shortURL})
+			response = append(response, model.URL{CorrelationID: url.CorrelationID, ShortURL: shortURL})
 		}
 		ctx.JSON(http.StatusCreated, response)
 	case "memory":
-		response := make([]storage.URLStorage, 0, len(urls))
+		response := make([]model.URL, 0, len(urls))
 		for _, url := range urls {
 			if url.ShortURL == "" {
 				url.ShortURL = utils.RandString(10)
@@ -187,9 +202,67 @@ func (a *api) CreateShortURLBatch(ctx *gin.Context) {
 				return
 			}
 			shortURL := fmt.Sprintf("%v%v", respondingServerAddress, url.ShortURL)
-			response = append(response, storage.URLStorage{CorrelationID: url.CorrelationID, ShortURL: shortURL})
+			response = append(response, model.URL{CorrelationID: url.CorrelationID, ShortURL: shortURL})
 		}
 		ctx.JSON(http.StatusCreated, response)
+	}
+}
+
+func (a *api) GetAllUserURLS(ctx *gin.Context) {
+	var (
+		urls []model.URL
+		err  error
+	)
+	userID, ok := ctx.Get("user_id")
+	if !ok {
+		ctx.JSON(http.StatusNoContent, "user_id is empty")
+		return
+	}
+
+	scheme := "http"
+	if ctx.Request.TLS != nil {
+		scheme = "https"
+	}
+	respondingServerAddress := fmt.Sprintf("%v://%v/", scheme, ctx.Request.Host)
+	if a.flags.GetRespondingServer() != "" {
+		respondingServerAddress = fmt.Sprintf("%v/", a.flags.GetRespondingServer())
+	}
+
+	db := database.NewInitializerReaderWriter(a.repo, a.flags)
+	urls, err = db.ReadBatchURLByUserID(userID.(int), respondingServerAddress)
+	if err != nil {
+		ctx.JSON(http.StatusNoContent, "something wrong")
+		return
+	}
+	if len(urls) == 0 {
+		ctx.JSON(http.StatusNoContent, "this user has no records")
+		return
+	}
+	ctx.JSON(http.StatusOK, urls)
+}
+
+func (a *api) DeleteUserURLS(ctx *gin.Context) {
+	ctx.Status(http.StatusAccepted)
+
+	userID, ok := ctx.Get("user_id")
+	if !ok {
+		return
+	}
+
+	body, err := ctx.GetRawData()
+	if err != nil {
+		return
+	}
+
+	var urls []string
+	if err = json.Unmarshal(body, &urls); err != nil {
+		return
+	}
+
+	db := database.NewInitializerReaderWriter(a.repo, a.flags)
+	if err = db.UpdateDeletionStatusOfBatchURL(urls, userID.(int)); err != nil {
+		fmt.Println(err)
+		return
 	}
 }
 

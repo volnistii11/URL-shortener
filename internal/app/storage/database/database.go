@@ -2,6 +2,7 @@ package database
 
 import (
 	"fmt"
+	"github.com/volnistii11/URL-shortener/internal/model"
 
 	"github.com/volnistii11/URL-shortener/internal/app/config"
 	"github.com/volnistii11/URL-shortener/internal/app/storage"
@@ -17,8 +18,11 @@ import (
 type InitializerReaderWriter interface {
 	CreateTableIfNotExists() error
 	ReadURL(shortURL string) (string, error)
-	WriteURL(urls *storage.URLStorage) (string, error)
-	WriteBatchURL(urls []storage.URLStorage, serverAddress string) ([]storage.URLStorage, error)
+	WriteURL(urls *model.URL) (string, error)
+	WriteBatchURL(urls []model.URL, serverAddress string) ([]model.URL, error)
+	ReadBatchURLByUserID(userID int, serverAddress string) ([]model.URL, error)
+	UpdateDeletionStatusOfBatchURL(urls []string, userID int) error
+	CheckRecordDeletedOrNot(shortURL string) (bool, error)
 }
 
 func NewInitializerReaderWriter(repository storage.Repository, cfg config.Flags) InitializerReaderWriter {
@@ -34,16 +38,12 @@ type database struct {
 }
 
 func (db *database) CreateTableIfNotExists() error {
-	if err := db.repo.GetDatabase().Ping(); err != nil {
-		return err
-	}
-
 	//if err := runMigrations(db.flags.GetDatabaseDSN()); err != nil {
 	//	return errors.Wrap(err, "Start migrations")
 	//}
 
 	_, err := db.repo.GetDatabase().
-		Exec("CREATE TABLE IF NOT EXISTS url_dependencies (id serial primary key, correlation_id varchar(255) null, short_url varchar(255) not null unique, original_url varchar(255) not null unique)")
+		Exec("CREATE TABLE IF NOT EXISTS url_dependencies (id serial primary key, correlation_id varchar(255) null, short_url varchar(255) not null unique, original_url varchar(255) not null unique, user_id integer null, is_deleted boolean default false)")
 	if err != nil {
 		return err
 	}
@@ -53,9 +53,6 @@ func (db *database) CreateTableIfNotExists() error {
 
 func (db *database) ReadURL(shortURL string) (string, error) {
 	dbConnection := db.repo.GetDatabase()
-	if err := dbConnection.Ping(); err != nil {
-		return "", err
-	}
 
 	sb := squirrel.Select("original_url").
 		From("url_dependencies").
@@ -66,18 +63,14 @@ func (db *database) ReadURL(shortURL string) (string, error) {
 	var originalURL string
 	err := sb.QueryRow().Scan(&originalURL)
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "ReadURL")
 	}
 
 	return originalURL, nil
 }
 
-func (db *database) WriteURL(url *storage.URLStorage) (string, error) {
+func (db *database) WriteURL(url *model.URL) (string, error) {
 	dbConnection := db.repo.GetDatabase()
-
-	if err := dbConnection.Ping(); err != nil {
-		return "", err
-	}
 
 	if url.ShortURL == "" {
 		url.ShortURL = utils.RandString(10)
@@ -85,7 +78,7 @@ func (db *database) WriteURL(url *storage.URLStorage) (string, error) {
 
 	sb := squirrel.StatementBuilder.
 		Insert("url_dependencies").
-		Columns("correlation_id", "short_url", "original_url").
+		Columns("correlation_id", "short_url", "original_url", "user_id").
 		PlaceholderFormat(squirrel.Dollar).
 		RunWith(dbConnection)
 
@@ -93,6 +86,7 @@ func (db *database) WriteURL(url *storage.URLStorage) (string, error) {
 		url.CorrelationID,
 		url.ShortURL,
 		url.OriginalURL,
+		url.UserID,
 	)
 
 	_, err := sb.Exec()
@@ -114,22 +108,17 @@ func (db *database) WriteURL(url *storage.URLStorage) (string, error) {
 	return url.ShortURL, nil
 }
 
-func (db *database) WriteBatchURL(urls []storage.URLStorage, serverAddress string) ([]storage.URLStorage, error) {
-
-	if err := db.repo.GetDatabase().Ping(); err != nil {
-		return nil, err
-	}
-
+func (db *database) WriteBatchURL(urls []model.URL, serverAddress string) ([]model.URL, error) {
 	tx, err := db.repo.GetDatabase().Begin()
 	if err != nil {
 		return nil, err
 	}
 
-	response := make([]storage.URLStorage, 0, len(urls))
+	response := make([]model.URL, 0, len(urls))
 
 	sb := squirrel.StatementBuilder.
 		Insert("url_dependencies").
-		Columns("correlation_id", "short_url", "original_url").
+		Columns("correlation_id", "short_url", "original_url", "user_id").
 		PlaceholderFormat(squirrel.Dollar).
 		RunWith(tx)
 
@@ -142,10 +131,11 @@ func (db *database) WriteBatchURL(urls []storage.URLStorage, serverAddress strin
 			url.CorrelationID,
 			url.ShortURL,
 			url.OriginalURL,
+			url.UserID,
 		)
 
 		shortURL := fmt.Sprintf("%v%v", serverAddress, url.ShortURL)
-		response = append(response, storage.URLStorage{CorrelationID: url.CorrelationID, ShortURL: shortURL})
+		response = append(response, model.URL{CorrelationID: url.CorrelationID, ShortURL: shortURL})
 	}
 
 	_, err = sb.Exec()
@@ -153,6 +143,7 @@ func (db *database) WriteBatchURL(urls []storage.URLStorage, serverAddress strin
 		if err := tx.Rollback(); err != nil {
 			return nil, errors.Wrap(err, "Rollback")
 		}
+		return nil, errors.Wrap(err, "Query")
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -160,6 +151,106 @@ func (db *database) WriteBatchURL(urls []storage.URLStorage, serverAddress strin
 	}
 
 	return response, nil
+}
+
+func (db *database) ReadBatchURLByUserID(userID int, serverAddress string) ([]model.URL, error) {
+	tx, err := db.repo.GetDatabase().Begin()
+	if err != nil {
+		return nil, err
+	}
+
+	queryRowCount := squirrel.Select("COUNT(*)").
+		From("url_dependencies").
+		Where(squirrel.Eq{"user_id": userID}).
+		PlaceholderFormat(squirrel.Dollar).
+		RunWith(tx)
+
+	var rowCount int
+	errSelect := queryRowCount.QueryRow().Scan(&rowCount)
+	if errSelect != nil {
+		if err := tx.Rollback(); err != nil {
+			return nil, errors.Wrap(err, "Select row count -> rollback")
+		}
+		return nil, errors.Wrap(errSelect, "Select row count")
+	}
+	if rowCount == 0 {
+		if err := tx.Rollback(); err != nil {
+			return nil, errors.Wrap(err, "Row count = 0 -> rollback")
+		}
+		return nil, errors.Wrap(err, "Row count = 0")
+	}
+
+	query := squirrel.Select("short_url, original_url").
+		From("url_dependencies").
+		Where(squirrel.Eq{"user_id": userID}).
+		PlaceholderFormat(squirrel.Dollar).
+		RunWith(tx)
+	rows, err := query.Query()
+	if err != nil {
+		if err := tx.Rollback(); err != nil {
+			return nil, errors.Wrap(err, "Select urls -> rollback")
+		}
+		return nil, errors.Wrap(err, "Select urls")
+	}
+	if rows.Err() != nil {
+		if err := tx.Rollback(); err != nil {
+			return nil, errors.Wrap(err, "rows.err -> rollback")
+		}
+		return nil, errors.Wrap(err, "rows.err")
+	}
+	defer rows.Close()
+
+	response := make([]model.URL, 0, rowCount)
+	var shortURL string
+	var originalURL string
+	for rows.Next() {
+		err = rows.Scan(&shortURL, &originalURL)
+		if err != nil {
+			if err := tx.Rollback(); err != nil {
+				return nil, errors.Wrap(err, "Scan -> rollback")
+			}
+			return nil, errors.Wrap(err, "Scan")
+		}
+		shortURL = fmt.Sprintf("%v%v", serverAddress, shortURL)
+		response = append(response, model.URL{ShortURL: shortURL, OriginalURL: originalURL})
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, errors.Wrap(err, "Commit")
+	}
+
+	return response, nil
+}
+
+func (db *database) UpdateDeletionStatusOfBatchURL(urls []string, userID int) error {
+	query := squirrel.Update("url_dependencies").
+		Set("is_deleted", true).
+		Where(squirrel.Eq{"user_id": userID, "short_url": urls}).
+		PlaceholderFormat(squirrel.Dollar).
+		RunWith(db.repo.GetDatabase())
+
+	_, err := query.Exec()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (db *database) CheckRecordDeletedOrNot(shortURL string) (bool, error) {
+	dbConnection := db.repo.GetDatabase()
+
+	sb := squirrel.Select("is_deleted").
+		From("url_dependencies").
+		Where(squirrel.Eq{"short_url": shortURL}).
+		PlaceholderFormat(squirrel.Dollar).
+		RunWith(dbConnection)
+
+	var deletedFlag bool
+	err := sb.QueryRow().Scan(&deletedFlag)
+	if err != nil {
+		return false, errors.Wrap(err, "CheckRecordDeletedOrNot Scan")
+	}
+	return deletedFlag, nil
 }
 
 func runMigrations(dsn string) error {
