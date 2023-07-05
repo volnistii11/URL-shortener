@@ -1,32 +1,32 @@
-# go-musthave-shortener-tpl
+# Hey, url-shortener is my first golang project =)
 
-Шаблон репозитория для трека «Сервис сокращения URL».
+Here I was trained with some new things for the first time.
 
-## Начало работы
+## Frameworks, libs and tools
 
-1. Склонируйте репозиторий в любую подходящую директорию на вашем компьютере.
-2. В корне репозитория выполните команду `go mod init <name>` (где `<name>` — адрес вашего репозитория на GitHub без префикса `https://`) для создания модуля.
+- Gin;
+- Pgx;
+- Golang-jwt;
+- Zap;
+- Golang-migrate;
+- Squirrel;
+- Sqlx;
+- Pgx.
 
-## Обновление шаблона
+## Storage options
 
-Чтобы иметь возможность получать обновления автотестов и других частей шаблона, выполните команду:
+- Memory;
+- File .json;
+- PostgreSQL.
 
-```
-git remote add -m main template https://github.com/Yandex-Practicum/go-musthave-shortener-tpl.git
-```
+## REST API Handlers
 
-Для обновления кода автотестов выполните команду:
-
-```
-git fetch template && git checkout template/main .github
-```
-
-Затем добавьте полученные изменения в свой репозиторий.
-
-## Запуск автотестов
-
-Для успешного запуска автотестов называйте ветки `iter<number>`, где `<number>` — порядковый номер инкремента. Например, в ветке с названием `iter4` запустятся автотесты для инкрементов с первого по четвёртый.
-
-При мёрже ветки с инкрементом в основную ветку `main` будут запускаться все автотесты.
-
-Подробнее про локальный и автоматический запуск читайте в [README автотестов](https://github.com/Yandex-Practicum/go-autotests).
+| Method | Path                                                  | Description              |
+| :----: | :---------------------------------------------------: | :----------------------: |
+| POST   | [/]                                            | Create new short url         |
+| GET    | [/{short_url}]                                   | Get original url |
+| GET    | [/ping]                                   | Ping database server |
+| POST    | [/api/shorten]                                   | Crate new short url |
+| POST    | [/api/shorten/batch]                                   | Crate batch url |
+| GET    | [/api/user/urls]                                   | Get all user urls|
+| DELETE    | [/api/user/urls]                                   | Delete batch url|
