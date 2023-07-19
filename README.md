@@ -30,3 +30,7 @@ Here I was trained with some new things for the first time.
 | POST    | [/api/shorten/batch]                                   | Crate batch url |
 | GET    | [/api/user/urls]                                   | Get all user urls|
 | DELETE    | [/api/user/urls]                                   | Delete batch url|
+
+## Start with PostgreSQL
+
+./shortener -f="" -d=postgres://pguser:pgpwd4habr@localhost:5432/shortenerdb
